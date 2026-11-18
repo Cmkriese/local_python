@@ -73,7 +73,8 @@ def summarize(dates, flows, sites):
             f"{min_flow:.1f}",
             f"{average_flow:.1f}",
         ])
-
+#The summary file will be saved in the same directory as the script.
+#AI made a summary that consisted of the max min and average flow for each gauge of the river. 
     summary_file = Path(__file__).with_name("streamflow_summary.csv")
     with summary_file.open("w", newline="") as file:
         writer = csv.writer(file)
@@ -81,8 +82,20 @@ def summarize(dates, flows, sites):
         writer.writerows(summary_rows)
 
 
+def report_threshold(flows, sites, threshold):
+    """Print the number of hours each gauge stayed above a flow threshold."""
+    print(f"\nHours above {threshold:g} cfs:")
+    for column, site in enumerate(sites):
+        # Each reading represents 15 minutes, or one quarter of an hour.
+        readings_above_threshold = np.sum(flows[:, column] > threshold)
+        hours_above_threshold = readings_above_threshold * 0.25
+        print(f"{site}: {hours_above_threshold:.2f} hours")
+#the report tells of the readings of the flow that were above the threshold that was inputted by the user.
+
 # Main program
 sites = ["10163000", "10155200", "10155500", "10154200", "10155000"]
 dates, flows = load_streamflow(data_file)
 plot_streamflow(dates, flows, sites)
 summarize(dates, flows, sites)
+threshold = float(input("\nEnter a flow threshold in cfs: "))
+report_threshold(flows, sites, threshold)
