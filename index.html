@@ -2,14 +2,36 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=./first_app/">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Beam Designer</title>
-  <script>
-    window.location.replace("./first_app/");
-  </script>
+  <title>Engineering Web Apps</title>
+  <style>
+    body {
+      max-width: 760px;
+      margin: 60px auto;
+      padding: 20px;
+      font-family: system-ui, sans-serif;
+      color: #172033;
+      background: #f4f7fb;
+    }
+    h1 { margin-bottom: 24px; }
+    .apps { display: grid; gap: 16px; }
+    .app-link {
+      display: block;
+      padding: 20px;
+      border: 1px solid #dbe3ef;
+      background: white;
+      color: #2563eb;
+      font-size: 18px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+  </style>
 </head>
 <body>
-  <p><a href="./first_app/">Open Beam Designer</a></p>
+  <h1>Engineering Web Apps</h1>
+  <div class="apps">
+    <a class="app-link" href="./first_app/">Open Beam Designer</a>
+    <a class="app-link" href="./flow_converter/">Open Flow Converter</a>
+  </div>
 </body>
 </html>
