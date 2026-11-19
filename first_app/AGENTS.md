@@ -39,6 +39,7 @@ The detailed requirements are maintained in `spec.md`. Keep this file synchroniz
 - 2026-11-19: Expanded the specification for beam deformation and along-the-beam stress visualization, using the calculated deflection curve and a green-to-red local bending-stress gradient.
 - 2026-11-19: Added the beam deformation and stress visualization to `index.html`; the beam now follows the calculated deflection and is colored continuously from green at low local moment to red at maximum local moment.
 - 2026-11-19: Browser-checked the new beam visualization; the default case rendered 204 colored beam segments and the “green low / red max” stress legend.
+- 2026-11-19: Added a root `index.html` redirect to `first_app/` so the repository can provide a clean GitHub Pages address.
 
 ## Working rules
 

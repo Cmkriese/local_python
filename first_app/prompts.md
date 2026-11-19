@@ -29,3 +29,7 @@
 - **Asked:** Implement the new beam-deformation and stress-gradient specification in the index.
 - **Changed:** Replaced the straight beam stroke with sampled, downward-positive deflection geometry and a continuous green-to-yellow-to-red local bending-stress gradient. Added an in-drawing stress legend and retained the horizontal beam scale and supports.
 - **Worked:** Browser validation remains to be rechecked after reload.
+
+- **Asked:** Publish the repository as a GitHub Pages site with a public URL.
+- **Changed:** Added a root `index.html` redirect to `first_app/` and prepared the master branch for GitHub Pages publication.
+- **Worked:** Pending GitHub Pages configuration and deployment.
