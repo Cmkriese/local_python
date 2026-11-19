@@ -622,16 +622,20 @@
 
         if (load.type === "point") {
           const magnitudeError = validateNumericRange(load.magnitude, 0, 100, `Point load ${index + 1} magnitude`);
-          const positionError = validateNumericRange(load.position, 0, state.span, `Point load ${index + 1} position`);
           if (magnitudeError) errors.push(magnitudeError);
-          if (positionError) errors.push(positionError);
+          if (state.span !== null) {
+            const positionError = validateNumericRange(load.position, 0, state.span, `Point load ${index + 1} position`);
+            if (positionError) errors.push(positionError);
+          }
         } else {
           const magnitudeError = validateNumericRange(load.magnitude, 0, 10, `Uniform load ${index + 1} magnitude`);
-          const startError = validateNumericRange(load.start, 0, state.span, `Uniform load ${index + 1} start`);
-          const endError = validateNumericRange(load.end, 0, state.span, `Uniform load ${index + 1} end`);
           if (magnitudeError) errors.push(magnitudeError);
-          if (startError) errors.push(startError);
-          if (endError) errors.push(endError);
+          if (state.span !== null) {
+            const startError = validateNumericRange(load.start, 0, state.span, `Uniform load ${index + 1} start`);
+            const endError = validateNumericRange(load.end, 0, state.span, `Uniform load ${index + 1} end`);
+            if (startError) errors.push(startError);
+            if (endError) errors.push(endError);
+          }
           if (load.start !== null && load.end !== null && load.start > load.end) {
             errors.push(`Uniform load ${index + 1} start must be at or before its end.`);
           }
@@ -861,6 +865,7 @@
     function calculate(state, sectionName, materialName) {
       const material = sectionData[materialName];
       const section = material[sectionName];
+      if (!section) return null;
       const span = state.span;
       const reaction = reactions(state);
       const step = Math.min(0.02, span / 200);
@@ -962,8 +967,38 @@
       const left = 60;
       const right = 760;
       const beamY = 106;
-      let markup = `<line class="grid-line" x1="${left}" y1="135" x2="${right}" y2="135"/>
-        <line x1="${left}" y1="${beamY}" x2="${right}" y2="${beamY}" stroke="#334155" stroke-width="12"/>`;
+      let markup = `<line class="grid-line" x1="${left}" y1="135" x2="${right}" y2="135"/>`;
+
+      const localMomentMax = Math.max(1e-9, ...analysis.samples.map((item) => Math.abs(item.m)));
+      const absoluteDeflectionMax = Math.max(1e-9, ...analysis.samples.map((item) => Math.abs(item.y)));
+      const availableExaggeration = 34;
+      const deflectionPixelsPerInch = availableExaggeration / absoluteDeflectionMax;
+
+      const deformedSamples = analysis.samples.filter((item, index, items) =>
+        index === 0 ||
+        index === items.length - 1 ||
+        item.x === 0 ||
+        item.x === span ||
+        index % 5 === 0
+      );
+
+      const beamPoints = deformedSamples.map((item) => {
+        const x = xScale(item.x, span);
+        const y = beamY + item.y * deflectionPixelsPerInch;
+        return { x, y, stress: Math.abs(item.m) / localMomentMax };
+      });
+
+      for (let index = 0; index < beamPoints.length - 1; index++) {
+        const a = beamPoints[index];
+        const b = beamPoints[index + 1];
+        const hue = 120 * (1 - (a.stress + b.stress) / 2);
+        const color = `hsl(${hue}, 78%, 42%)`;
+        markup += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${color}" stroke-width="12" stroke-linecap="round"/>`;
+      }
+
+      markup += `
+        <rect x="610" y="8" width="150" height="18" fill="#ffffff" fill-opacity="0.92"/>
+        <text class="label" x="760" y="21" text-anchor="end">Stress: green low / red max</text>`;
       if (state.support === "cantilever") {
         markup += `<rect x="${left - 8}" y="82" width="8" height="48" fill="#2563eb"/>`;
       } else {
@@ -1038,7 +1073,7 @@
       button.disabled = !recommendation;
       button.onclick = () => {
         sectionSelect.value = recommendation.name;
-        refresh();
+        renderAll();
       };
     }
 
@@ -1053,6 +1088,7 @@
 
     function renderAll() {
       if (!applyInputValidation()) return;
+      if (!sectionData[materialKey()][appState.section]) return;
       currentAnalysis = calculate(appState, appState.section, materialKey());
       renderBeam(currentAnalysis);
       diagramSvg(shearSvg, currentAnalysis, "v", "k", "Shear");

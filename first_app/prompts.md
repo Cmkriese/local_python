@@ -21,3 +21,11 @@
 - **Asked:** Build Stages 3 through 6 in the index folder.
 - **Changed:** Replaced output placeholders with live SVG beam and diagram rendering, equilibrium reactions, load superposition, shear and moment sampling, inch-based deflection integration, bending and deflection checks, section recommendations, draggable point loads, linked pointer readouts, extrema labels, adaptive scales, and live responsive updates.
 - **Worked:** JavaScript syntax tooling was unavailable in the environment; the implementation was checked with diff validation and targeted source inspection.
+
+- **Asked:** Add the beam-deformation and stress-gradient requirements to the bottom of the specification.
+- **Changed:** Added requirements for a visibly deflected beam with exaggerated display scaling, downward-positive deflection, and a continuous green-to-red local bending-stress color gradient keyed to maximum absolute moment. Updated the project change log.
+- **Worked:** Yes.
+
+- **Asked:** Implement the new beam-deformation and stress-gradient specification in the index.
+- **Changed:** Replaced the straight beam stroke with sampled, downward-positive deflection geometry and a continuous green-to-yellow-to-red local bending-stress gradient. Added an in-drawing stress legend and retained the horizontal beam scale and supports.
+- **Worked:** Browser validation remains to be rechecked after reload.

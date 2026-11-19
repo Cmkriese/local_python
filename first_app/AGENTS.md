@@ -35,6 +35,10 @@ The detailed requirements are maintained in `spec.md`. Keep this file synchroniz
 - 2026-11-19: Built Stage 1 as a static, single-file Beam Designer mockup in `index.html` with placeholder outputs and no calculations.
 - 2026-11-19: Built Stage 2 input and validation behavior in `index.html`, including synchronized spans, load controls, material-section switching, and invalid-output hiding.
 - 2026-11-19: Built Stages 3 through 6 in `index.html`, including live beam drawing, draggable loads, reactions, analytical diagrams, numerical deflection, design checks, recommendations, linked pointer readouts, and responsive polish.
+- 2026-11-19: Ran the validation cases in-browser and fixed the recommendation button, material/section switching guard, and blank-span validation message.
+- 2026-11-19: Expanded the specification for beam deformation and along-the-beam stress visualization, using the calculated deflection curve and a green-to-red local bending-stress gradient.
+- 2026-11-19: Added the beam deformation and stress visualization to `index.html`; the beam now follows the calculated deflection and is colored continuously from green at low local moment to red at maximum local moment.
+- 2026-11-19: Browser-checked the new beam visualization; the default case rendered 204 colored beam segments and the “green low / red max” stress legend.
 
 ## Working rules
 
