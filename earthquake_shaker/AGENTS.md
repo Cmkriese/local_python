@@ -19,6 +19,10 @@ This project is a single-page Earthquake Shaker app. Detailed requirements and i
 - 2026-11-19: Set up the top-level project files and numbered folder layout.
 - 2026-11-19: Added an abbreviated purpose statement covering tower construction, earthquake simulation, cost and strength scoring, and saved design comparison.
 - 2026-11-19: Expanded the input specification with selectable joints, joint material and fastener properties, stiffness and failure strengths, and editable frequency, amplitude, direction, duration, and acceleration ground-motion inputs.
+- 2026-11-19: Built Section 1 and Section 2 of `index.html`: a responsive 2D tower editor with preset pieces, grid placement, undo/redo, geometry controls, live piece counts, member properties, floor properties, and editable joint capacities.
+- 2026-11-19: Built Section 3 of `index.html`: preset cost calculations, itemized member/floor/joint/foundation/labor totals, local saved tower versions, duplicate/load/delete actions, and saved-model cost comparison.
+- 2026-11-19: Built Sections 4–6 of `index.html`: 1–10 second ground-motion inputs, lumped-mass structural response, natural-frequency and resonance estimates, sky-and-grass testing playback, member and joint damage reporting, 1–100 resilience scoring, and live upgrade actions.
+- 2026-11-19: Improved the UI for tall towers and collapse: dynamic story scaling keeps all floors visible, columns-per-row is editable, snapped piece placement shows hover previews, stress colors members during playback, failed beams/floors fall visibly, and strong-motion tests return collapsed 1/100 reports.
 
 ## Working rules
 
