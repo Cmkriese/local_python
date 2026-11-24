@@ -2,6 +2,12 @@
 
 ## 2026-11-24
 
+- **Asked:** Add file operations so the user can make a new project, open an existing project, and save project work.
+- **Changed:** Added New/Open/Save/Save As actions, `.eqs` JSON project files, keyboard shortcuts, dirty-state title marking, save-before-replace/close prompts, and project validation while opening. Updated the spec to include project-file behavior.
+- **Worked:** Implemented in `gui.py`; not yet run interactively.
+
+## 2026-11-24
+
 - **Asked:** Run the validation cases and report expected versus actual results.
 - **Changed:** Reviewed the specification cases against the implementation, ran Python syntax compilation, and recorded the case-by-case findings in `02_validation/2026-11-24-validation-review.md`.
 - **Worked:** Syntax compilation passed. The project has no executable validation harness; most specified behavior is absent or only partially implemented, as detailed in the review.

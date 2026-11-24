@@ -24,6 +24,8 @@ class EarthquakeShaker:
         self.members = []
         self.undo_stack = []
         self.saved = {}
+        self.project_path = None
+        self.dirty = False
         self.selected = None
         self.start_node = None
         self.preview_node = None
@@ -48,9 +50,29 @@ class EarthquakeShaker:
         self.speed = tk.DoubleVar(value=1)
         self.status = tk.StringVar(value="Ready • Select a tool, then click grid points to place members")
         self._build()
+        self.root.protocol("WM_DELETE_WINDOW", self.close_app)
+        for variable in (self.floors, self.bays, self.height, self.spacing,
+                         self.material, self.motion, self.frequency, self.pga, self.duration):
+            variable.trace_add("write", self.mark_dirty)
+        self.update_title()
         self.draw()
 
     def _build(self):
+        menubar = tk.Menu(self.root)
+        file_menu = tk.Menu(menubar, tearoff=False)
+        file_menu.add_command(label="New", accelerator="Ctrl+N", command=self.new_project)
+        file_menu.add_command(label="Open…", accelerator="Ctrl+O", command=self.open_project)
+        file_menu.add_separator()
+        file_menu.add_command(label="Save", accelerator="Ctrl+S", command=self.save_project)
+        file_menu.add_command(label="Save As…", accelerator="Ctrl+Shift+S", command=self.save_project_as)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.close_app)
+        menubar.add_cascade(label="File", menu=file_menu)
+        self.root.config(menu=menubar)
+        self.root.bind("<Control-n>", lambda e: self.new_project())
+        self.root.bind("<Control-o>", lambda e: self.open_project())
+        self.root.bind("<Control-s>", lambda e: self.save_project())
+        self.root.bind("<Control-Shift-S>", lambda e: self.save_project_as())
         header = tk.Frame(self.root, bg=INK, height=58)
         header.pack(fill="x")
         tk.Label(header, text="EARTHQUAKE SHAKER", bg=INK, fg="white", font=("Segoe UI", 16, "bold")).pack(side="left", padx=20, pady=14)
@@ -125,6 +147,133 @@ class EarthquakeShaker:
         ttk.Button(right, text="Export design JSON", command=self.export_design).pack(fill="x", pady=4)
         tk.Label(self.root, textvariable=self.status, bg="#e6eef1", fg="#405765", anchor="w", padx=12, pady=5).pack(fill="x")
         self.update_cost()
+
+    def mark_dirty(self, *_):
+        self.dirty = True
+        self.update_title()
+
+    def update_title(self):
+        name = self.project_path or "Untitled project"
+        marker = "*" if self.dirty else ""
+        self.root.title(f"{marker}{name} — Earthquake Shaker | Desktop Studio")
+
+    def project_data(self):
+        return {
+            "format": "earthquake-shaker-project",
+            "version": 1,
+            "geometry": {"floors": self.floors.get(), "bays": self.bays.get(),
+                         "height": self.height.get(), "spacing": self.spacing.get()},
+            "material": self.material.get(),
+            "ground_motion": {"profile": self.motion.get(), "frequency": self.frequency.get(),
+                              "pga": self.pga.get(), "duration": self.duration.get()},
+            "members": self.members,
+            "saved_designs": self.saved,
+        }
+
+    def save_project(self):
+        if not self.project_path:
+            return self.save_project_as()
+        return self.write_project(self.project_path)
+
+    def save_project_as(self):
+        path = filedialog.asksaveasfilename(
+            title="Save Earthquake Shaker project", defaultextension=".eqs",
+            filetypes=(("Earthquake Shaker project", "*.eqs"), ("JSON files", "*.json")))
+        if not path:
+            return False
+        return self.write_project(path)
+
+    def write_project(self, path):
+        try:
+            with open(path, "w", encoding="utf-8") as project_file:
+                json.dump(self.project_data(), project_file, indent=2)
+        except (OSError, TypeError, ValueError) as exc:
+            messagebox.showerror("Could not save project", str(exc))
+            return False
+        self.project_path = path
+        self.dirty = False
+        self.update_title()
+        self.status.set(f"Project saved: {path}")
+        return True
+
+    def open_project(self):
+        path = filedialog.askopenfilename(
+            title="Open Earthquake Shaker project",
+            filetypes=(("Earthquake Shaker project", "*.eqs"), ("JSON files", "*.json"), ("All files", "*.*")))
+        if not path:
+            return
+        if not self.confirm_discard():
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as project_file:
+                data = json.load(project_file)
+            geometry = data["geometry"]
+            floors = int(geometry["floors"]); bays = int(geometry["bays"])
+            height = float(geometry["height"]); spacing = float(geometry["spacing"])
+            if not 1 <= floors <= 30 or not 1 <= bays <= 8 or not 8 <= height <= 30 or not 5 <= spacing <= 30:
+                raise ValueError("Project geometry is outside the supported ranges.")
+            members = data["members"]
+            if not isinstance(members, list):
+                raise ValueError("The project member list is invalid.")
+            for member in members:
+                if member.get("type") not in ("Column", "Beam", "Brace", "Floor", "Joint"):
+                    raise ValueError("Project contains an unknown member type.")
+                member["a"] = tuple(map(int, member["a"])); member["b"] = tuple(map(int, member["b"]))
+                for point in (member["a"], member["b"]):
+                    if len(point) != 2 or not 0 <= int(point[0]) <= bays or not 0 <= int(point[1]) <= floors:
+                        raise ValueError("Project contains a point outside its grid.")
+            ground = data.get("ground_motion", {})
+            frequency = float(ground.get("frequency", 1.0))
+            pga = float(ground.get("pga", .25)); duration = float(ground.get("duration", 10))
+            if not .1 <= frequency <= 20 or not 0 <= pga <= 2 or not 1 <= duration <= 10:
+                raise ValueError("Project ground-motion settings are outside the supported ranges.")
+            material = data.get("material", "Steel")
+            if material not in ("Steel", "Concrete", "Timber", "Masonry"):
+                raise ValueError("Project material preset is not recognized.")
+            profile = ground.get("profile", "Sine")
+            if profile not in ("Sine", "Pulse", "White noise"):
+                raise ValueError("Project ground-motion profile is not recognized.")
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+            messagebox.showerror("Could not open project", str(exc))
+            return
+        self.reset_test()
+        self.floors.set(floors); self.bays.set(bays)
+        self.height.set(height); self.spacing.set(spacing)
+        self.members = members; self.material.set(material)
+        self.frequency.set(frequency); self.pga.set(pga); self.duration.set(duration)
+        self.motion.set(profile); self.saved = data.get("saved_designs", {})
+        self.saved_list.delete(0, "end")
+        for name in self.saved: self.saved_list.insert("end", name)
+        self.project_path = path; self.dirty = False
+        self.undo_stack.clear(); self.selected = None; self.cancel_placement(redraw=False)
+        self.update_title(); self.draw()
+        self.status.set(f"Opened project: {path}")
+
+    def confirm_discard(self):
+        if not self.dirty:
+            return True
+        answer = messagebox.askyesnocancel("Unsaved project", "Save changes before continuing?")
+        if answer is None:
+            return False
+        if answer:
+            return self.save_project()
+        return True
+
+    def new_project(self):
+        if not self.confirm_discard():
+            return
+        self.reset_test()
+        self.floors.set(5); self.bays.set(3); self.height.set(10); self.spacing.set(15)
+        self.members = []; self.saved = {}; self.saved_list.delete(0, "end")
+        self.material.set("Steel"); self.motion.set("Sine")
+        self.frequency.set(1.0); self.pga.set(.25); self.duration.set(10)
+        self.project_path = None; self.dirty = False; self.undo_stack.clear()
+        self.selected = None; self.cancel_placement(redraw=False)
+        self.update_title(); self.draw(); self.status.set("New project")
+
+    def close_app(self):
+        if self.confirm_discard():
+            self.root.destroy()
 
     def _label(self, parent, text):
         tk.Label(parent, text=text, bg="white", fg=BLUE, font=("Segoe UI", 9, "bold")).pack(anchor="w", pady=(5, 7))
@@ -241,11 +390,13 @@ class EarthquakeShaker:
                 self.status.set(f"{tool}s must stay on one story. Choose Point B along the same floor line."); return
             if node!=self.start_node:
                 self.undo_stack.append(json.dumps(self.members)); self.members.append({"type":tool,"a":self.start_node,"b":node,"material":self.material.get(),"status":"intact"})
+                self.mark_dirty()
                 self.status.set(f"{tool} created from {self.start_node} to {node}. Select another tool or continue placing.")
             else: self.status.set("Point B must differ from Point A."); return
             self.start_node=None; self.preview_node=None; self.draw()
         elif tool=="Joint" and node:
             self.undo_stack.append(json.dumps(self.members)); self.members.append({"type":"Joint","a":node,"b":node,"material":self.material.get(),"status":"intact"}); self.draw()
+            self.mark_dirty()
             self.status.set(f"Joint added at grid node {node}")
 
     def move_canvas(self,e):
@@ -323,15 +474,15 @@ class EarthquakeShaker:
         self.time=0; self.collapse=0; self.collapse_triggered=False; self.progress['value']=0; self.result_text.set("Run a shake test to calculate response."); self.status.set("Test reset • Ready"); self.draw()
 
     def undo(self):
-        if self.undo_stack:self.members=json.loads(self.undo_stack.pop()); self.draw()
+        if self.undo_stack:self.members=json.loads(self.undo_stack.pop()); self.mark_dirty(); self.draw()
 
     def delete_selected(self):
         if self.selected is not None and 0<=self.selected<len(self.members):
-            self.undo_stack.append(json.dumps(self.members)); self.members.pop(self.selected); self.selected=None; self.draw()
+            self.undo_stack.append(json.dumps(self.members)); self.members.pop(self.selected); self.selected=None; self.mark_dirty(); self.draw()
 
     def clear(self):
         if self.members and messagebox.askyesno("Clear model", "Remove all placed members?"):
-            self.undo_stack.append(json.dumps(self.members)); self.members=[]; self.draw()
+            self.undo_stack.append(json.dumps(self.members)); self.members=[]; self.mark_dirty(); self.draw()
 
     def snapshot(self):
         return {"floors":self.floors.get(),"bays":self.bays.get(),"height":self.height.get(),"spacing":self.spacing.get(),"members":self.members.copy(),"frequency":self.frequency.get(),"pga":self.pga.get(),"duration":self.duration.get()}
@@ -340,6 +491,7 @@ class EarthquakeShaker:
         name=simpledialog.askstring("Save tower", "Design name:", initialvalue=f"Tower {len(self.saved)+1}")
         if not name:return
         self.saved[name]=self.snapshot(); self.saved_list.insert("end",name); self.status.set(f"Saved design: {name}")
+        self.mark_dirty()
 
     def compare(self):
         selection=self.saved_list.curselection()

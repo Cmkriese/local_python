@@ -124,6 +124,13 @@ Create a native Python desktop application using Tkinter. Users build a model to
 - Duplicate, rename, overwrite, export, and delete saved versions.
 - Select at least two saved versions to compare displacement curves, peak values, costs, and scores.
 
+### Project files
+- Provide File menu commands for New, Open, Save, and Save As, with keyboard shortcuts for common actions.
+- Store the active tower geometry, placed components, material preset, ground-motion profile and settings, and saved design versions in a portable project file.
+- Opening an unsupported or malformed project shall show an understandable error and leave the current project unchanged.
+- Prompt to save unsaved edits before opening another project, starting a new project, or closing the application.
+- Show the active project name in the window title and indicate unsaved changes.
+
 ## Calculations
 ### Calculation scope and sign conventions
 - The initial physics model shall be a two-dimensional, lumped-mass, multi-degree-of-freedom shear and bending frame in the selected X or Y direction.
