@@ -229,6 +229,19 @@ The available sections are:
   message instead. Do not keep or mark stale calculated results.
 - **Live updates:** Recalculate and update every valid output immediately
   whenever any input changes. Do not require an Apply button or a debounce.
+- **Save and open:** Provide Save and Open commands using native desktop file
+  dialogs. Save the beam to a versioned JSON project file with a `.beam.json`
+  extension. Include the support type, span, material, selected section,
+  deflection limit, and every point and uniform load with its magnitude,
+  position or start/end boundaries, and list order.
+- **Restoring a saved beam:** Opening a valid project file restores all saved
+  input values and load rows, then recalculates reactions, shear, moment,
+  deflection, design checks, and recommendations from those inputs. The beam
+  drawing must show the restored loads and calculated deflected shape; do not
+  rely on saved result values as the source of truth.
+- **File errors:** Do not save while inputs are invalid; show a clear
+  validation message. If an opened file is malformed, unsupported, or contains
+  invalid beam inputs, show a clear error and leave the current beam unchanged.
 
 ## Look and feel
 - Opens with an example already loaded (20 ft simply supported W12x26
@@ -319,6 +332,12 @@ in the Calculations section.
 - Each diagram must include the same beam span and x-axis scale.
 - Pointer movement over the beam or a diagram must show the matching
   `x`, `V`, `M`, and `y` readout across the linked diagrams.
+- Saving a beam with multiple point and uniform loads and reopening it must
+  restore the support, span, material, section, deflection limit, load types,
+  magnitudes, positions, boundaries, and order. Recalculated reactions,
+  diagrams, and deflection values must match the pre-save beam.
+- An invalid or unsupported project file must report an error without
+  replacing the current beam.
 
 ## Build stages
 
@@ -378,6 +397,19 @@ in the Calculations section.
   pass/fail colors are legible, and all validation cases work in the desktop
   app.
 
+### Stage 7: Save and open beam files
+- Add Save and Open commands with native file dialogs and a versioned JSON
+  project file format using the `.beam.json` extension.
+- Save all beam inputs and the complete ordered load list. Validate saved
+  input before writing, and validate a complete file before replacing the
+  current beam.
+- On open, restore the inputs and load rows, then recalculate and redraw all
+  outputs, including the deflected shape.
+- Test a round trip containing multiple load types and verify that the
+  restored inputs, reactions, diagrams, and deflections match the original.
+  Also verify malformed, unsupported, or invalid files leave the current beam
+  unchanged and show a clear error.
+
 ## Out of scope
 - Beam geometry other than a prismatic, straight beam with the two
   support types provided.
@@ -398,7 +430,7 @@ in the Calculations section.
 - Composite beams, built-up sections, reinforced concrete, prestressed
   concrete, and other material systems.
 - Three-dimensional models and three-dimensional frame or truss analysis.
-- Saving, loading, sharing, exporting, or printing designs.
+- Sharing designs across users or cloud services, exporting, and printing.
 
 ## Beam deformation and stress visualization
 - When the beam has any nonzero load, the beam drawing must show the

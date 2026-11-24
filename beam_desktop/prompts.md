@@ -7,3 +7,6 @@
 - Asked: Run all validation cases in `spec.md` against the app's beam calculations and report expected versus actual values.
   Changed: Executed the four hand-calculation scenarios and smoke-checked the additional interactive acceptance requirements.
   Worked: Yes; the checks ran. Case 2's deflection differs from the spec's estimate, as reported with the comparison.
+- Asked: Add a spec feature to save a beam and reopen it with its loads and deflections preserved.
+  Changed: Added versioned JSON Save/Open requirements, restoration and file-error behavior, round-trip acceptance checks, and removed saving/loading from the out-of-scope list.
+  Worked: Yes; the specification now describes the feature without changing the app.
