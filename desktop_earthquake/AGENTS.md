@@ -26,6 +26,7 @@ Add a README to each project folder describing what belongs there.
 
 ## Change Log
 
+- 2026-11-24: Corrected `00_planning/README.md` to name the Earthquake Shaker project.
 - 2026-11-24: Added New/Open/Save/Save As project-file workflow with JSON `.eqs` files, unsaved-change prompts, and active project title state.
 - 2026-11-24: Recorded expected-versus-actual validation review; Python syntax compilation passed, while most behavioral cases remain partial or unimplemented.
 - 2026-11-24: Changed shake animation to lateral story drift and added a falling-apart effect for placed components at high input motion.

@@ -2,6 +2,12 @@
 
 ## 2026-11-24
 
+- **Asked:** Check the README files for correctness and presentation.
+- **Changed:** Corrected the planning-folder README, which incorrectly referred to the Desktop Beam app instead of Earthquake Shaker. The data, validation, and output folder descriptions were accurate.
+- **Worked:** Yes. Reviewed all four folder README files; no root README is specified by the project layout.
+
+## 2026-11-24
+
 - **Asked:** Add file operations so the user can make a new project, open an existing project, and save project work.
 - **Changed:** Added New/Open/Save/Save As actions, `.eqs` JSON project files, keyboard shortcuts, dirty-state title marking, save-before-replace/close prompts, and project validation while opening. Updated the spec to include project-file behavior.
 - **Worked:** Implemented in `gui.py`; not yet run interactively.
