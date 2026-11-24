@@ -10,3 +10,6 @@
 - Asked: Add a spec feature to save a beam and reopen it with its loads and deflections preserved.
   Changed: Added versioned JSON Save/Open requirements, restoration and file-error behavior, round-trip acceptance checks, and removed saving/loading from the out-of-scope list.
   Worked: Yes; the specification now describes the feature without changing the app.
+- Asked: Have you been pushing those changes?
+  Changed: Checked the current branch and its upstream status; no push was performed.
+  Worked: Confirmed the branch had five commits ahead of `origin/master`.
