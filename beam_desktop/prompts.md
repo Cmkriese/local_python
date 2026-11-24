@@ -4,3 +4,6 @@
 - Asked: Read `spec.md` and build the desktop app it describes, using `index.html` as a behavior reference.
   Changed: Added a Tkinter desktop interface in `gui.py`, exact beam calculations and section checks in `beam_analysis.py`, and acceptance tests in `test_beam_analysis.py`.
   Worked: Yes; seven calculation tests and Tkinter interaction smoke checks passed.
+- Asked: Run all validation cases in `spec.md` against the app's beam calculations and report expected versus actual values.
+  Changed: Executed the four hand-calculation scenarios and smoke-checked the additional interactive acceptance requirements.
+  Worked: Yes; the checks ran. Case 2's deflection differs from the spec's estimate, as reported with the comparison.
