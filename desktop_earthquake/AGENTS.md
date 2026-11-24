@@ -15,7 +15,7 @@ Add a README to each project folder describing what belongs there.
 
 ## Project Status
 
-`gui.py` is still a minimal Tkinter starter window. The project specification calls for a native desktop reimplementation of the Earthquake Shaker described in `../earthquake_shaker/spec.md`; the conversion has not yet been implemented.
+`gui.py` contains the initial Tkinter desktop implementation of the Earthquake Shaker workflow. Its response calculation is a simplified educational estimate; consult `spec.md` for the broader target requirements.
 
 ## Working Rules
 
@@ -26,5 +26,10 @@ Add a README to each project folder describing what belongs there.
 
 ## Change Log
 
+- 2026-11-24: Recorded expected-versus-actual validation review; Python syntax compilation passed, while most behavioral cases remain partial or unimplemented.
+- 2026-11-24: Changed shake animation to lateral story drift and added a falling-apart effect for placed components at high input motion.
+- 2026-11-24: Reworked grid placement to show Point A and a live Point B preview; made floors, joints, and endpoint rules functional.
+- 2026-11-24: Replaced the starter window with a Tkinter tower editor, ground-motion controls, shake-test animation, result/cost panel, and save/compare/export workflow.
+- 2026-11-24: Clarified the Tkinter desktop target and desktop-window behavior in the specification; no application code changed.
 - 2026-11-24: Added the standard project documentation and numbered folders for planning, data, validation, and output.
 - 2026-11-24: Specified a native Tkinter desktop port of the Earthquake Shaker, using its source specification and web app as references.
