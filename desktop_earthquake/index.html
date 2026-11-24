@@ -1,0 +1,1762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Earthquake Shaker</title>
+  <style>
+    :root {
+      --accent: #2563eb;
+      --ink: #172033;
+      --muted: #64748b;
+      --line: #dbe3ef;
+      --surface: #fff;
+      --background: #f4f7fb;
+      --green: #16864a;
+      --red: #c53030;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--background);
+    }
+    button, input, select { font: inherit; }
+    button, input, select { min-height: 44px; }
+    .app-header {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+    .app-header h1 { margin: 0; font-size: 22px; }
+    .app-header p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+    }
+    .toolbar button,
+    .piece,
+    .secondary,
+    .primary {
+      border: 1px solid #b9c5d6;
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .toolbar button { padding: 8px 12px; }
+    .layout {
+      display: grid;
+      grid-template-columns: 230px minmax(460px, 1fr) 270px;
+      min-height: calc(100vh - 72px);
+    }
+    .panel {
+      background: var(--surface);
+      border-right: 1px solid var(--line);
+      padding: 16px;
+    }
+    .properties { border-right: 0; border-left: 1px solid var(--line); }
+    .panel h2, .properties h2 {
+      margin: 0 0 12px;
+      font-size: 15px;
+    }
+    .section-title {
+      margin: 18px 0 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .piece-list { display: grid; gap: 8px; }
+    .piece {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      align-items: center;
+      min-height: 52px;
+      width: 100%;
+      text-align: left;
+      padding: 6px;
+    }
+    .piece.active {
+      border-color: var(--accent);
+      background: #eff6ff;
+      color: #1e40af;
+    }
+    .piece-icon {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid #b9c5d6;
+      background: #fff;
+      font-size: 16px;
+      font-weight: 800;
+    }
+    .piece strong { display: block; font-size: 13px; }
+    .piece small { color: var(--muted); }
+    .canvas-panel {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      background: #edf3f8;
+    }
+    .canvas-top {
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 12px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+    .mode-name { color: var(--accent); font-weight: 800; }
+    .canvas-wrap {
+      min-height: 560px;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(rgba(37,99,235,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37,99,235,.035) 1px, transparent 1px),
+        #f8fafc;
+      background-size: 20px 20px;
+    }
+    #towerSvg {
+      width: 100%;
+      height: 100%;
+      max-height: 620px;
+      min-height: 560px;
+      touch-action: none;
+      user-select: none;
+    }
+    .canvas-bottom {
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 12px;
+      background: #fff;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .field { display: grid; gap: 6px; margin-bottom: 12px; }
+    .field label { color: #344054; font-size: 12px; font-weight: 800; }
+    input, select {
+      width: 100%;
+      border: 1px solid #b9c5d6;
+      border-radius: 6px;
+      background: #fff;
+      padding: 8px;
+      color: var(--ink);
+    }
+    .properties-empty {
+      padding: 16px 10px;
+      border: 1px dashed #b9c5d6;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .property-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .secondary, .primary { padding: 8px 10px; font-weight: 800; }
+    .primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      background: #fafcff;
+    }
+    .stat strong { display: block; font-size: 18px; }
+    .stat span { color: var(--muted); font-size: 11px; }
+    .cost-box {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fafcff;
+      padding: 10px;
+      font-size: 12px;
+    }
+    .cost-box strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 18px;
+    }
+    .cost-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 5px;
+      color: var(--muted);
+    }
+    .saved-box {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .saved-item {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      padding: 8px;
+      font-size: 12px;
+    }
+    .saved-item label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 44px;
+      cursor: pointer;
+    }
+    .saved-item input[type="checkbox"] {
+      width: 18px;
+      min-height: 18px;
+    }
+    .saved-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .motion-box {
+      display: grid;
+      gap: 8px;
+    }
+    .run-button {
+      width: 100%;
+      min-height: 52px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--green);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .testing-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      background: #bfe1f2;
+    }
+    .testing-overlay.active { display: flex; }
+    .testing-stage { flex: 1; min-height: 0; }
+    #testingSvg { display: block; width: 100%; height: 100%; }
+    .testing-bar {
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 14px;
+      background: rgba(255,255,255,.96);
+      border-top: 1px solid var(--line);
+    }
+    .testing-readout {
+      display: flex;
+      gap: 14px;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .report-panel {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      padding: 10px;
+      font-size: 12px;
+    }
+    .score-ring {
+      display: grid;
+      place-items: center;
+      width: 82px;
+      height: 82px;
+      margin: 4px auto 10px;
+      border: 8px solid #16864a;
+      border-radius: 50%;
+      font-size: 24px;
+      font-weight: 900;
+    }
+    .report-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 11px;
+    }
+    .report-table th,
+    .report-table td {
+      border-bottom: 1px solid var(--line);
+      padding: 5px 3px;
+      text-align: left;
+    }
+    .validation {
+      display: none;
+      margin-top: 10px;
+      padding: 9px;
+      border-left: 4px solid var(--red);
+      background: #fff1f2;
+      color: #9f1239;
+      font-size: 12px;
+    }
+    .validation.visible { display: block; }
+    .grid-line { stroke: #dbe5ef; stroke-width: 1; }
+    .axis-line { stroke: #94a3b8; stroke-width: 1; }
+    .node { fill: #fff; stroke: #64748b; stroke-width: 2; cursor: pointer; }
+    .node.start { fill: #2563eb; stroke: #1e40af; }
+    .node.hover { fill: #2563eb; stroke: #1e40af; stroke-width: 4; }
+    .column { stroke: #334155; stroke-width: 10; stroke-linecap: square; cursor: pointer; }
+    .beam { stroke: #2563eb; stroke-width: 8; stroke-linecap: square; cursor: pointer; }
+    .brace { stroke: #7c3aed; stroke-width: 6; stroke-linecap: round; cursor: pointer; }
+    .floor-slab { fill: #d9e5f2; stroke: #64748b; stroke-width: 2; cursor: pointer; }
+    .joint { fill: #f59e0b; stroke: #92400e; stroke-width: 2; cursor: pointer; }
+    .selected { filter: drop-shadow(0 0 5px rgba(37,99,235,.85)); }
+    .member-label, .node-label, .floor-label {
+      fill: #475569;
+      font-size: 11px;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 190px minmax(380px, 1fr) 230px; }
+    }
+    @media (max-width: 760px) {
+      .app-header { height: auto; align-items: flex-start; gap: 10px; padding: 12px; }
+      .layout { grid-template-columns: 1fr; }
+      .panel, .properties { border: 0; border-bottom: 1px solid var(--line); }
+      .piece-list { grid-template-columns: repeat(3, 1fr); }
+      .piece { grid-template-columns: 38px 1fr; }
+      .canvas-wrap, #towerSvg { min-height: 500px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>Earthquake Shaker</h1>
+      <p>2D Tower Editor</p>
+    </div>
+    <div class="toolbar" aria-label="Edit toolbar">
+      <button id="undoButton" type="button" title="Undo">Undo</button>
+      <button id="redoButton" type="button" title="Redo">Redo</button>
+      <button id="deleteButton" type="button" title="Delete selected piece">Delete</button>
+      <button id="clearButton" type="button" title="Clear tower">Clear</button>
+      <button id="saveTowerButton" class="primary" type="button" title="Save tower">Save Tower</button>
+      <button id="runButton" class="run-button" type="button" title="Run earthquake test" style="min-height:44px;width:auto;padding:8px 14px">Run Test</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel" aria-label="Piece library">
+      <h2>Piece Library</h2>
+      <div class="piece-list">
+        <button class="piece active" type="button" data-tool="select">
+          <span class="piece-icon">↖</span>
+          <span><strong>Select</strong><small>Edit or inspect</small></span>
+        </button>
+        <button class="piece" type="button" data-tool="column">
+          <span class="piece-icon">I</span>
+          <span><strong>Column</strong><small>W10 × 49</small></span>
+        </button>
+        <button class="piece" type="button" data-tool="beam">
+          <span class="piece-icon">—</span>
+          <span><strong>Beam</strong><small>W12 × 26</small></span>
+        </button>
+        <button class="piece" type="button" data-tool="brace">
+          <span class="piece-icon">╱</span>
+          <span><strong>Brace</strong><small>HSS preset</small></span>
+        </button>
+        <button class="piece" type="button" data-tool="floor">
+          <span class="piece-icon">▤</span>
+          <span><strong>Floor</strong><small>4 in. RC slab</small></span>
+        </button>
+        <button class="piece" type="button" data-tool="joint">
+          <span class="piece-icon">●</span>
+          <span><strong>Joint</strong><small>Fixed preset</small></span>
+        </button>
+      </div>
+
+      <div class="section-title">Geometry</div>
+      <div class="field">
+        <label for="floors">Floors</label>
+        <input id="floors" type="number" min="1" max="10" value="5">
+      </div>
+      <div class="field">
+        <label for="bays">Bays</label>
+        <input id="bays" type="number" min="1" max="6" value="3">
+      </div>
+      <div class="field">
+        <label for="columnsPerRow">Columns per row</label>
+        <input id="columnsPerRow" type="number" min="2" max="8" value="4">
+      </div>
+      <div class="field">
+        <label for="floorHeight">Floor height (ft)</label>
+        <input id="floorHeight" type="number" min="8" max="30" value="10">
+      </div>
+      <div class="field">
+        <label for="baySpacing">Bay spacing (ft)</label>
+        <input id="baySpacing" type="number" min="10" max="30" value="15">
+      </div>
+      <div class="validation" id="geometryValidation" role="alert"></div>
+
+      <div class="section-title">Ground motion</div>
+      <div class="motion-box">
+        <div class="field">
+          <label for="motionProfile">Motion profile</label>
+          <select id="motionProfile">
+            <option value="sine" selected>Sine ground motion</option>
+            <option value="pulse">Short pulse</option>
+            <option value="sweep">Frequency sweep</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="motionFrequency">Frequency (Hz)</label>
+          <input id="motionFrequency" type="number" min="0.5" max="3" step="0.1" value="1">
+        </div>
+        <div class="field">
+          <label for="motionPGA">Peak acceleration (g)</label>
+          <input id="motionPGA" type="number" min="0.05" max="2" step="0.05" value="0.25">
+        </div>
+        <div class="field">
+          <label for="motionDuration">Duration (s)</label>
+          <input id="motionDuration" type="number" min="1" max="10" step="1" value="10">
+        </div>
+        <div class="field">
+          <label for="motionDamping">Damping (%)</label>
+          <input id="motionDamping" type="number" min="0" max="30" step="1" value="5">
+        </div>
+        <div class="field">
+          <label for="motionSpeed">Playback speed</label>
+          <select id="motionSpeed">
+            <option value="1">1x</option>
+            <option value="2" selected>2x</option>
+            <option value="4">4x</option>
+          </select>
+        </div>
+        <button id="leftRunButton" class="run-button" type="button">Run 10-second test</button>
+      </div>
+    </aside>
+
+    <section class="canvas-panel" aria-label="Tower editor">
+      <div class="canvas-top">
+        <span>Mode: <span class="mode-name" id="modeName">Select</span></span>
+        <span id="placementHint">Select a piece, then click a member or grid point.</span>
+      </div>
+      <div class="canvas-wrap">
+        <svg id="towerSvg" viewBox="0 0 800 600" role="img" aria-label="Interactive two-dimensional tower grid"></svg>
+      </div>
+      <div class="canvas-bottom">
+        <span id="pieceCounts">0 columns · 0 beams · 0 braces · 0 floors · 0 joints</span>
+        <span>Grid snap on</span>
+      </div>
+    </section>
+
+    <aside class="panel properties" aria-label="Properties">
+      <h2>Properties</h2>
+      <div id="propertiesContent" class="properties-empty">
+        Select a column, beam, brace, floor, or joint to edit its properties.
+      </div>
+      <div class="section-title">Live piece count</div>
+      <div class="stats" id="liveStats">
+        <div class="stat"><strong id="columnCount">0</strong><span>Columns</span></div>
+        <div class="stat"><strong id="beamCount">0</strong><span>Beams</span></div>
+        <div class="stat"><strong id="braceCount">0</strong><span>Braces</span></div>
+        <div class="stat"><strong id="floorCount">0</strong><span>Floors</span></div>
+      </div>
+      <div class="section-title">Estimated cost</div>
+      <div class="cost-box" id="costSummary"></div>
+      <div class="section-title">Saved towers</div>
+      <div class="field">
+        <label for="towerName">Tower name</label>
+        <input id="towerName" type="text" value="Tower 1">
+      </div>
+      <button class="primary" id="saveRightButton" type="button" style="width:100%">Save current tower</button>
+      <div class="saved-box" id="savedList"></div>
+      <button class="secondary" id="compareButton" type="button" style="width:100%; margin-top:8px">Compare selected</button>
+      <div class="validation" id="compareMessage"></div>
+      <div class="section-title">Test report</div>
+      <div class="report-panel" id="reportPanel">
+        <div class="properties-empty">Run the tower test to view score, resonance, member stress, joint stress, and upgrade recommendations.</div>
+      </div>
+    </aside>
+  </main>
+
+  <div class="testing-overlay" id="testingOverlay" role="dialog" aria-label="Earthquake testing zone" aria-modal="true">
+    <div class="testing-stage">
+      <svg id="testingSvg" viewBox="0 0 800 600" role="img" aria-label="Tower earthquake testing zone"></svg>
+    </div>
+    <div class="testing-bar">
+      <div class="testing-readout" id="testingReadout">
+        <span>Time 0.00 s</span>
+        <span>PGA 0.00 g</span>
+        <span>Roof 0.00 ft</span>
+        <span>Status Ready</span>
+      </div>
+      <div class="toolbar">
+        <button id="pauseTestButton" type="button">Pause</button>
+        <button id="replayTestButton" type="button">Replay</button>
+        <button id="exitTestButton" type="button">Exit</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const svg = document.getElementById("towerSvg");
+    const propertiesContent = document.getElementById("propertiesContent");
+    const modeName = document.getElementById("modeName");
+    const placementHint = document.getElementById("placementHint");
+    const pieceCounts = document.getElementById("pieceCounts");
+    const geometryValidation = document.getElementById("geometryValidation");
+
+    const floorsInput = document.getElementById("floors");
+    const baysInput = document.getElementById("bays");
+    const columnsPerRowInput = document.getElementById("columnsPerRow");
+    const floorHeightInput = document.getElementById("floorHeight");
+    const baySpacingInput = document.getElementById("baySpacing");
+
+    let tool = "select";
+    let selected = null;
+    let placementStart = null;
+    let hoverNode = null;
+    let undoStack = [];
+    let redoStack = [];
+
+    const state = {
+      floors: 5,
+      bays: 3,
+      columnsPerRow: 4,
+      floorHeight: 10,
+      baySpacing: 15,
+      members: [],
+      floorsList: [],
+      joints: []
+    };
+
+    const costLibrary = {
+      memberPerFoot: { column: 85, beam: 65, brace: 55 },
+      materialMultiplier: { Steel: 1.00, "Reinforced concrete": 1.18, Timber: 0.82 },
+      joint: { "Fixed preset": 650, Pinned: 350, Bolted: 500, Welded: 800, "Reinforced concrete": 900 },
+      floorPerSquareFoot: { "Reinforced concrete": 18, "Steel deck": 14, Timber: 11 },
+      labor: 0.18,
+      foundationPerJoint: 220
+    };
+
+    let savedModels = [];
+    try {
+      savedModels = JSON.parse(localStorage.getItem("earthquakeShakerTowers") || "[]");
+      if (!Array.isArray(savedModels)) savedModels = [];
+    } catch (error) {
+      savedModels = [];
+    }
+
+    let activeRun = null;
+    let testElapsed = 0;
+    let testPaused = false;
+    let testAnimationFrame = null;
+
+    function snapshot() {
+      return JSON.stringify({
+        state: {
+          floors: state.floors,
+          bays: state.bays,
+          columnsPerRow: state.columnsPerRow,
+          floorHeight: state.floorHeight,
+          baySpacing: state.baySpacing,
+          members: state.members,
+          floorsList: state.floorsList,
+          joints: state.joints
+        }
+      });
+    }
+
+    function pushHistory() {
+      undoStack.push(snapshot());
+      if (undoStack.length > 50) undoStack.shift();
+      redoStack = [];
+    }
+
+    function restore(serialized) {
+      const parsed = JSON.parse(serialized).state;
+      state.floors = parsed.floors;
+      state.bays = parsed.bays;
+      state.columnsPerRow = parsed.columnsPerRow || parsed.bays + 1;
+      state.floorHeight = parsed.floorHeight;
+      state.baySpacing = parsed.baySpacing;
+      state.members = parsed.members;
+      state.floorsList = parsed.floorsList;
+      state.joints = parsed.joints;
+      floorsInput.value = state.floors;
+      baysInput.value = state.bays;
+      columnsPerRowInput.value = state.columnsPerRow;
+      floorHeightInput.value = state.floorHeight;
+      baySpacingInput.value = state.baySpacing;
+      selected = null;
+      render();
+    }
+
+    function nodePosition(bay, story) {
+      const left = 180;
+      const right = 620;
+      const ground = 530;
+      const columnCount = Math.max(2, state.columnsPerRow || state.bays + 1);
+      const xStep = (right - left) / (columnCount - 1);
+      const yStep = Math.min(78, 390 / Math.max(1, state.floors));
+      return {
+        x: left + bay * xStep,
+        y: ground - story * yStep
+      };
+    }
+
+    function nodeId(bay, story) {
+      return `${bay}-${story}`;
+    }
+
+    function nearestNodeFromEvent(event) {
+      const rect = svg.getBoundingClientRect();
+      const x = (event.clientX - rect.left) / rect.width * 800;
+      const y = (event.clientY - rect.top) / rect.height * 600;
+      let nearest = null;
+      let nearestDistance = Infinity;
+      const columnCount = Math.max(2, state.columnsPerRow || state.bays + 1);
+      for (let story = 0; story <= state.floors; story++) {
+        for (let bay = 0; bay < columnCount; bay++) {
+          const point = nodePosition(bay, story);
+          const distance = Math.hypot(point.x - x, point.y - y);
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearest = nodeId(bay, story);
+          }
+        }
+      }
+      return nearestDistance <= 55 ? nearest : null;
+    }
+
+    function makeDefaultPreset() {
+      state.members = [];
+      state.floorsList = [];
+      state.joints = [];
+      const columnCount = Math.max(2, state.columnsPerRow || state.bays + 1);
+
+      for (let story = 0; story <= state.floors; story++) {
+        for (let bay = 0; bay < columnCount; bay++) {
+          state.joints.push({ id: `J-${bay}-${story}`, bay, story, type: "Fixed preset" });
+        }
+      }
+
+      for (let bay = 0; bay < columnCount; bay++) {
+        for (let story = 0; story < state.floors; story++) {
+          state.members.push({
+            id: `C-${bay}-${story}`,
+            type: "column",
+            start: nodeId(bay, story),
+            end: nodeId(bay, story + 1),
+            material: "Steel",
+            section: "W10x49"
+          });
+        }
+      }
+
+      for (let story = 1; story <= state.floors; story++) {
+        for (let bay = 0; bay < columnCount - 1; bay++) {
+          state.members.push({
+            id: `B-${bay}-${story}`,
+            type: "beam",
+            start: nodeId(bay, story),
+            end: nodeId(bay + 1, story),
+            material: "Steel",
+            section: "W12x26"
+          });
+        }
+        state.floorsList.push({
+          id: `F-${story}`,
+          story,
+          material: "Reinforced concrete",
+          thickness: 4,
+          area: state.baySpacing * state.baySpacing * Math.max(1, state.columnsPerRow - 1)
+        });
+      }
+
+      if (state.floors >= 2 && state.bays >= 2) {
+        for (let story = 0; story < state.floors; story += 2) {
+          state.members.push({
+            id: `X-${story}`,
+            type: "brace",
+            start: nodeId(0, story),
+            end: nodeId(1, story + 1),
+            material: "Steel",
+            section: "HSS 4x4x1/4"
+          });
+        }
+      }
+    }
+
+    function getNode(nodeIdValue) {
+      const parts = nodeIdValue.split("-").map(Number);
+      return nodePosition(parts[0], parts[1]);
+    }
+
+    function calculateCosts(sourceState = state) {
+      let memberCost = 0;
+      sourceState.members.forEach((member) => {
+        const lengthInFeet = member.type === "column"
+          ? sourceState.floorHeight
+          : member.type === "brace"
+          ? Math.sqrt(sourceState.baySpacing ** 2 + sourceState.floorHeight ** 2)
+          : sourceState.baySpacing;
+        memberCost += lengthInFeet * costLibrary.memberPerFoot[member.type] *
+          (costLibrary.materialMultiplier[member.material] || 1);
+      });
+
+      const floorCost = sourceState.floorsList.reduce((total, floor) => {
+        const slabCost = (floor.area || 100) * (costLibrary.floorPerSquareFoot[floor.material] || 14) *
+          ((floor.thickness || 4) / 4);
+        return total + slabCost;
+      }, 0);
+
+      const jointCost = sourceState.joints.reduce((total, joint) =>
+        total + (costLibrary.joint[joint.type] || 650), 0);
+      const foundationCost = sourceState.joints.filter((joint) => joint.story === 0).length *
+        costLibrary.foundationPerJoint;
+      const baseStructureCost = memberCost + floorCost + jointCost + foundationCost;
+      const laborCost = baseStructureCost * costLibrary.labor;
+      const total = baseStructureCost + laborCost;
+      return {
+        memberCost,
+        floorCost,
+        jointCost,
+        foundationCost,
+        laborCost,
+        total
+      };
+    }
+
+    function formatCurrency(value) {
+      return value.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+    }
+
+    function updateCostSummary() {
+      const costs = calculateCosts();
+      document.getElementById("costSummary").innerHTML = `
+        <strong>${formatCurrency(costs.total)}</strong>
+        <div class="cost-row"><span>Members</span><span>${formatCurrency(costs.memberCost)}</span></div>
+        <div class="cost-row"><span>Floors</span><span>${formatCurrency(costs.floorCost)}</span></div>
+        <div class="cost-row"><span>Joints</span><span>${formatCurrency(costs.jointCost)}</span></div>
+        <div class="cost-row"><span>Foundation</span><span>${formatCurrency(costs.foundationCost)}</span></div>
+        <div class="cost-row"><span>Labor</span><span>${formatCurrency(costs.laborCost)}</span></div>`;
+    }
+
+    function saveTower() {
+      const nameInput = document.getElementById("towerName");
+      const name = nameInput.value.trim() || `Tower ${savedModels.length + 1}`;
+      const modelSnapshot = {
+        id: `tower-${Date.now()}`,
+        name,
+        savedAt: new Date().toISOString(),
+        state: JSON.parse(snapshot()).state,
+        costs: calculateCosts()
+      };
+      savedModels.unshift(modelSnapshot);
+      localStorage.setItem("earthquakeShakerTowers", JSON.stringify(savedModels));
+      nameInput.value = `Tower ${savedModels.length + 1}`;
+      renderSavedModels();
+    }
+
+    function loadTower(id) {
+      const model = savedModels.find((item) => item.id === id);
+      if (!model) return;
+      pushHistory();
+      restore(JSON.stringify({ state: model.state }));
+    }
+
+    function duplicateTower(id) {
+      const model = savedModels.find((item) => item.id === id);
+      if (!model) return;
+      const duplicate = {
+        ...model,
+        id: `tower-${Date.now()}`,
+        name: `${model.name} Copy`,
+        savedAt: new Date().toISOString()
+      };
+      savedModels.unshift(duplicate);
+      localStorage.setItem("earthquakeShakerTowers", JSON.stringify(savedModels));
+      renderSavedModels();
+    }
+
+    function deleteSavedTower(id) {
+      savedModels = savedModels.filter((item) => item.id !== id);
+      localStorage.setItem("earthquakeShakerTowers", JSON.stringify(savedModels));
+      renderSavedModels();
+    }
+
+    function renderSavedModels() {
+      const savedList = document.getElementById("savedList");
+      if (!savedModels.length) {
+        savedList.innerHTML = `<div class="properties-empty">No saved towers yet.</div>`;
+        return;
+      }
+      savedList.innerHTML = savedModels.map((model) => `
+        <div class="saved-item">
+          <label>
+            <input type="checkbox" class="compare-check" value="${model.id}">
+            <span><strong>${escapeHtml(model.name)}</strong><br>${formatCurrency(model.costs.total)}</span>
+          </label>
+          <div class="saved-actions">
+            <button class="secondary" type="button" data-load="${model.id}">Load</button>
+            <button class="secondary" type="button" data-duplicate="${model.id}">Duplicate</button>
+            <button class="secondary" type="button" data-delete="${model.id}">Delete</button>
+          </div>
+        </div>`).join("");
+      savedList.querySelectorAll("[data-load]").forEach((button) =>
+        button.addEventListener("click", () => loadTower(button.dataset.load)));
+      savedList.querySelectorAll("[data-duplicate]").forEach((button) =>
+        button.addEventListener("click", () => duplicateTower(button.dataset.duplicate)));
+      savedList.querySelectorAll("[data-delete]").forEach((button) =>
+        button.addEventListener("click", () => deleteSavedTower(button.dataset.delete)));
+    }
+
+    function compareSelectedTowers() {
+      const message = document.getElementById("compareMessage");
+      const selectedIds = [...document.querySelectorAll(".compare-check:checked")].map((input) => input.value);
+      if (selectedIds.length !== 2) {
+        message.classList.add("visible");
+        message.textContent = "Select exactly two saved towers to compare.";
+        return;
+      }
+      const models = selectedIds.map((id) => savedModels.find((item) => item.id === id)).filter(Boolean);
+      const first = models[0];
+      const second = models[1];
+      const costDifference = second.costs.total - first.costs.total;
+      message.classList.add("visible");
+      message.textContent =
+        `${first.name} and ${second.name}: cost difference ${formatCurrency(Math.abs(costDifference))} ` +
+        `${costDifference >= 0 ? "more" : "less"} for ${second.name}.`;
+    }
+
+    function clamp(value, minimum, maximum) {
+      return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    function jacobiSmallestEigenvalue(matrix) {
+      const n = matrix.length;
+      if (!n) return 0;
+      const a = matrix.map((row) => row.slice());
+      for (let iteration = 0; iteration < 300; iteration++) {
+        let largest = 0;
+        let p = 0;
+        let q = 0;
+        for (let i = 0; i < n; i++) {
+          for (let j = i + 1; j < n; j++) {
+            if (Math.abs(a[i][j]) > largest) {
+              largest = Math.abs(a[i][j]);
+              p = i;
+              q = j;
+            }
+          }
+        }
+        if (largest < 1e-10) break;
+        const app = a[p][p];
+        const aqq = a[q][q];
+        const apq = a[p][q];
+        const phi = 0.5 * Math.atan2(2 * apq, aqq - app);
+        const cosine = Math.cos(phi);
+        const sine = Math.sin(phi);
+        for (let k = 0; k < n; k++) {
+          if (k !== p && k !== q) {
+            const akp = a[k][p];
+            const akq = a[k][q];
+            a[k][p] = cosine * akp - sine * akq;
+            a[p][k] = a[k][p];
+            a[k][q] = sine * akp + cosine * akq;
+            a[q][k] = a[k][q];
+          }
+        }
+        a[p][p] = cosine * cosine * app - 2 * sine * cosine * apq + sine * sine * aqq;
+        a[q][q] = sine * sine * app + 2 * sine * cosine * apq + cosine * cosine * aqq;
+        a[p][q] = 0;
+        a[q][p] = 0;
+      }
+      const eigenvalues = [];
+      for (let i = 0; i < n; i++) eigenvalues.push(a[i][i]);
+      const positive = eigenvalues.filter((value) => value > 1e-8);
+      return positive.length ? Math.min(...positive) : 0;
+    }
+
+    function buildResponseModel() {
+      const count = state.floors;
+      const masses = [];
+      const storyStiffness = [];
+      const storyDrifts = [];
+      const columnCount = Math.max(2, state.columnsPerRow || state.bays + 1);
+      const braceCount = state.members.filter((member) => member.type === "brace").length;
+
+      for (let story = 1; story <= count; story++) {
+        const floor = state.floorsList.find((item) => item.story === story);
+        const area = floor ? floor.area : state.baySpacing * Math.max(1, state.columnsPerRow - 1) * state.baySpacing;
+        const thickness = floor ? floor.thickness : 4;
+        const material = floor ? floor.material : "Reinforced concrete";
+        const unitWeight = material === "Steel deck" ? 12 : material === "Timber" ? 14 : 150;
+        const slabWeight = material === "Reinforced concrete"
+          ? area * thickness * unitWeight / 144
+          : area * unitWeight;
+        const addedMass = floor && floor.mass ? floor.mass : 0;
+        masses.push((slabWeight / 1000 + addedMass) / 32.174);
+        const strengthScale = Math.max(0.25, (state.members.filter((member) =>
+          member.type === "column").length / Math.max(1, columnCount * count)));
+        const storyColumnFactor = columnCount * strengthScale * 22;
+        const braceFactor = Math.min(300, braceCount * 18);
+        storyStiffness.push(Math.max(200, storyColumnFactor + braceFactor));
+      }
+
+      const stiffness = Array.from({ length: count }, () => Array(count).fill(0));
+      for (let i = 0; i < count; i++) {
+        const lower = i === 0 ? storyStiffness[0] : storyStiffness[i];
+        if (i === 0) {
+          stiffness[i][i] += lower;
+        } else {
+          stiffness[i][i] += lower;
+        }
+        if (i > 0) stiffness[i][i] += storyStiffness[i - 1];
+        if (i > 0) stiffness[i][i - 1] -= storyStiffness[i - 1];
+        if (i < count - 1) stiffness[i][i + 1] -= storyStiffness[i];
+      }
+
+      const transformed = Array.from({ length: count }, (_, i) =>
+        Array.from({ length: count }, (_, j) =>
+          stiffness[i][j] / Math.sqrt(masses[i] * masses[j])));
+      const fundamentalLambda = jacobiSmallestEigenvalue(transformed);
+      const fundamentalOmega = Math.sqrt(Math.max(0, fundamentalLambda));
+      const fundamentalFrequency = fundamentalOmega / (2 * Math.PI);
+      const fundamentalPeriod = fundamentalFrequency > 0 ? 1 / fundamentalFrequency : 0;
+      return { masses, storyStiffness, stiffness, fundamentalFrequency, fundamentalPeriod };
+    }
+
+    function groundMotionAcceleration(time, motion) {
+      if (motion.profile === "pulse") {
+        const pulseWidth = Math.max(0.25, motion.duration / 5);
+        return motion.pga * 32.174 * Math.sin(Math.PI * time / pulseWidth) *
+          (time < pulseWidth ? 1 : 0);
+      }
+      if (motion.profile === "sweep") {
+        const frequency = 0.5 + (3 - 0.5) * time / motion.duration;
+        return motion.pga * 32.174 * Math.sin(2 * Math.PI * frequency * time);
+      }
+      return motion.pga * 32.174 * Math.sin(2 * Math.PI * motion.frequency * time);
+    }
+
+    function runEarthquakeAnalysis() {
+      const motion = {
+        profile: document.getElementById("motionProfile").value,
+        frequency: clamp(Number(document.getElementById("motionFrequency").value), 0.5, 3),
+        pga: clamp(Number(document.getElementById("motionPGA").value), 0.05, 2),
+        duration: clamp(Number(document.getElementById("motionDuration").value), 1, 10),
+        damping: clamp(Number(document.getElementById("motionDamping").value), 0, 30) / 100
+      };
+      const model = buildResponseModel();
+      const dt = 0.01;
+      const count = state.floors;
+      const displacement = Array(count).fill(0);
+      const velocity = Array(count).fill(0);
+      const acceleration = Array(count).fill(0);
+      const samples = [];
+      let peakRoof = 0;
+      let peakAcceleration = 0;
+      let peakDrift = 0;
+      let peakMemberUtilization = 0;
+      let peakJointUtilization = 0;
+      let collapsed = false;
+
+      for (let time = 0, step = 0; time <= motion.duration + dt / 2; time += dt, step++) {
+        const ag = groundMotionAcceleration(time, motion);
+        const nextAcceleration = Array(count).fill(0);
+        for (let i = 0; i < count; i++) {
+          let restoring = model.stiffness[i][i] * displacement[i];
+          if (i > 0) restoring += model.stiffness[i][i - 1] * displacement[i - 1];
+          if (i < count - 1) restoring += model.stiffness[i][i + 1] * displacement[i + 1];
+          const dampingCoefficient = 2 * motion.damping *
+            Math.sqrt(Math.max(model.stiffness[i][i], 1) * model.masses[i]);
+          nextAcceleration[i] = (-ag - dampingCoefficient * velocity[i] / model.masses[i] -
+            restoring / model.masses[i]);
+        }
+        for (let i = 0; i < count; i++) {
+          velocity[i] += nextAcceleration[i] * dt;
+          displacement[i] += velocity[i] * dt;
+          acceleration[i] = nextAcceleration[i];
+        }
+
+        const floorAccelerations = displacement.map((_, i) =>
+          Math.abs(acceleration[i] + ag));
+        const drifts = displacement.map((value, i) =>
+          i === 0 ? value : value - displacement[i - 1]);
+        const storyUtilizations = drifts.map((drift, i) => {
+          const driftRatio = Math.abs(drift) / state.floorHeight;
+          const floorAccelerationRatio = floorAccelerations[i] / 32.174;
+          return clamp(driftRatio * 15 + floorAccelerationRatio * 0.35 + motion.pga * 0.4, 0, 2.5);
+        });
+        peakMemberUtilization = Math.max(peakMemberUtilization, ...storyUtilizations);
+        peakJointUtilization = Math.max(peakJointUtilization, ...storyUtilizations.map((value) => value * 0.9));
+        peakRoof = Math.max(peakRoof, Math.abs(displacement[count - 1]));
+        peakAcceleration = Math.max(peakAcceleration, ...floorAccelerations);
+        peakDrift = Math.max(peakDrift, ...drifts.map((drift) => Math.abs(drift) / state.floorHeight));
+        if (peakDrift > 0.12 || peakMemberUtilization > 1.15 || peakJointUtilization > 1.15) collapsed = true;
+
+        if (step % 2 === 0) {
+          samples.push({
+            time,
+            ag,
+            displacement: displacement.slice(),
+            acceleration: acceleration.slice(),
+            drifts: drifts.slice(),
+            storyUtilizations: storyUtilizations.slice(),
+            collapsed
+          });
+        }
+      }
+
+      const memberResults = state.members.map((member) => {
+        const startStory = Number(member.start.split("-")[1]);
+        const endStory = Number(member.end.split("-")[1]);
+        const story = Math.min(startStory, endStory);
+        const utilization = peakMemberUtilization *
+          (member.type === "brace" ? 0.9 : member.type === "joint" ? 1 : 0.82) *
+          (0.85 + story / Math.max(1, state.floors) * 0.2);
+        const stress = clamp(utilization * 36, 0, 100);
+        const strain = utilization * 0.0012;
+        return {
+          ...member,
+          utilization: clamp(utilization, 0, 2.5),
+          stress,
+          strain,
+          state: utilization >= 1 ? "Failed" : utilization >= 0.8 ? "Damaged" : utilization >= 0.6 ? "Yielded" : "Elastic"
+        };
+      });
+
+      const jointResults = state.joints.map((joint) => {
+        const utilization = clamp(peakJointUtilization *
+          (0.75 + joint.story / Math.max(1, state.floors) * 0.35), 0, 2.5);
+        return {
+          ...joint,
+          utilization,
+          stress: clamp(utilization * 18, 0, 50),
+          strain: utilization * 0.0015,
+          state: utilization >= 1 ? "Failed" : utilization >= 0.8 ? "Damaged" : utilization >= 0.6 ? "Yielded" : "Intact"
+        };
+      });
+
+      return {
+        motion,
+        model,
+        samples,
+        peakRoof,
+        peakAcceleration,
+        peakDrift,
+        peakMemberUtilization,
+        peakJointUtilization,
+        collapsed,
+        residualDisplacement: count ? Math.abs(displacement[count - 1]) : 0,
+        memberResults,
+        jointResults
+      };
+    }
+
+    function validateMotionInputs() {
+      const profile = document.getElementById("motionProfile").value;
+      const frequency = Number(document.getElementById("motionFrequency").value);
+      const pga = Number(document.getElementById("motionPGA").value);
+      const duration = Number(document.getElementById("motionDuration").value);
+      const damping = Number(document.getElementById("motionDamping").value);
+      const validProfile = ["sine", "pulse", "sweep"].includes(profile);
+      const valid = validProfile && frequency >= 0.5 && frequency <= 3 &&
+        pga >= 0.05 && pga <= 2 && duration >= 1 && duration <= 10 &&
+        damping >= 0 && damping <= 30;
+      if (!valid) {
+        alert("Enter a frequency from 0.5–3 Hz, PGA from 0.05–2 g, duration from 1–10 s, and damping from 0–30%.");
+      }
+      return valid;
+    }
+
+    function renderTestingFrame(result, sample) {
+      const testingSvg = document.getElementById("testingSvg");
+      const baseGround = 530;
+      const displacementScale = 90;
+      const pgaInG = sample.ag / 32.174;
+      const baseOffset = pgaInG * 28;
+      const sky = `
+        <rect x="0" y="0" width="800" height="600" fill="#bfe1f2"/>
+        <circle cx="690" cy="90" r="42" fill="#fff4b8" opacity="0.95"/>
+        <ellipse cx="150" cy="105" rx="58" ry="18" fill="#fff" opacity="0.85"/>
+        <ellipse cx="205" cy="112" rx="42" ry="14" fill="#fff" opacity="0.75"/>
+        <rect x="0" y="500" width="800" height="100" fill="#78ad62"/>
+        <line x1="0" y1="500" x2="800" y2="500" stroke="#4d7c38" stroke-width="3"/>
+        <rect x="190" y="500" width="420" height="18" rx="3" fill="#697586"/>
+        <line x1="190" y1="518" x2="610" y2="518" stroke="#465163" stroke-width="5"/>`;
+
+      let markup = sky;
+      const displacement = sample.displacement;
+      const storyUtilizations = sample.storyUtilizations;
+
+      state.floorsList.forEach((floor) => {
+        const story = floor.story;
+        const x1 = nodePosition(0, story).x + baseOffset + (displacement[Math.max(0, story - 1)] || 0) * displacementScale;
+        const x2 = nodePosition(Math.max(1, state.columnsPerRow - 1), story).x + baseOffset + (displacement[Math.max(0, story - 1)] || 0) * displacementScale;
+        const yStep = Math.min(78, 390 / Math.max(1, state.floors));
+        let y = baseGround - story * yStep;
+        let fallOffset = 0;
+        if (sample.collapsed && story > 1) {
+          fallOffset = (story - 1) * 18;
+          y += fallOffset;
+        }
+        markup += `<rect x="${x1 - 10 + (sample.collapsed ? story * 8 : 0)}" y="${y - 9}" width="${x2 - x1 + 20}" height="18" fill="${sample.collapsed ? "#9ca3af" : "#d9e5f2"}" stroke="#64748b" stroke-width="2"/>`;
+      });
+
+      state.members.forEach((member) => {
+        const startParts = member.start.split("-").map(Number);
+        const endParts = member.end.split("-").map(Number);
+        const startBase = nodePosition(startParts[0], startParts[1]);
+        const endBase = nodePosition(endParts[0], endParts[1]);
+        const startOffset = (displacement[Math.max(0, startParts[1] - 1)] || 0) * displacementScale;
+        const endOffset = (displacement[Math.max(0, endParts[1] - 1)] || 0) * displacementScale;
+        const utilization = storyUtilizations[Math.max(0, Math.min(state.floors - 1,
+          Math.min(startParts[1], endParts[1]) - 1))] || 0;
+        const color = sample.collapsed && utilization >= 0.8 ? "#dc2626" : utilization >= 1 ? "#dc2626" : utilization >= 0.8 ? "#f97316" :
+          utilization >= 0.6 ? "#eab308" : member.type === "brace" ? "#7c3aed" : "#334155";
+        const width = member.type === "column" ? 10 : member.type === "beam" ? 8 : 6;
+        const failureDrop = sample.collapsed ? Math.max(0, Math.min(startParts[1], endParts[1]) - 1) * 12 : 0;
+        markup += `<line x1="${startBase.x + baseOffset + startOffset + (sample.collapsed ? 12 : 0)}" y1="${startBase.y + failureDrop}"
+          x2="${endBase.x + baseOffset + endOffset + (sample.collapsed ? 12 : 0)}" y2="${endBase.y + failureDrop}"
+          stroke="${color}" stroke-width="${width}" stroke-linecap="round"/>`;
+      });
+
+      state.joints.forEach((joint) => {
+        const point = nodePosition(joint.bay, joint.story);
+        const offset = (displacement[Math.max(0, joint.story - 1)] || 0) * displacementScale;
+        const utilization = storyUtilizations[Math.max(0, Math.min(state.floors - 1, joint.story - 1))] || 0;
+        const color = utilization >= 1 ? "#dc2626" : utilization >= 0.8 ? "#f97316" :
+          utilization >= 0.6 ? "#eab308" : "#f59e0b";
+        markup += `<circle cx="${point.x + baseOffset + offset}" cy="${point.y}" r="7" fill="${color}" stroke="#92400e" stroke-width="2"/>`;
+      });
+
+      markup += `
+        <text x="24" y="36" fill="#1e3a5f" font-size="16" font-weight="800">Earthquake Testing Zone</text>
+        <text x="24" y="58" fill="#475569" font-size="12">Educational 2D lumped-mass response</text>`;
+      testingSvg.innerHTML = markup;
+
+      const roof = displacement.length ? displacement[displacement.length - 1] : 0;
+      document.getElementById("testingReadout").innerHTML =
+        `<span>Time ${sample.time.toFixed(2)} s</span>` +
+        `<span>PGA ${(pgaInG).toFixed(2)} g</span>` +
+        `<span>Roof ${Math.abs(roof).toFixed(2)} ft</span>` +
+        `<span>Status ${testPaused ? "Paused" : "Running"}</span>`;
+    }
+
+    function renderReport(result) {
+      const costs = calculateCosts();
+      const rDrift = clamp(result.peakDrift / 0.02, 0, 2);
+      const rMember = clamp(result.peakMemberUtilization, 0, 2);
+      const rJoint = clamp(result.peakJointUtilization, 0, 2);
+      const rResidual = clamp(result.residualDisplacement / 0.10, 0, 2);
+      const rAcceleration = clamp(result.peakAcceleration / 32.174, 0, 2);
+      const rCost = clamp(costs.total / 150000, 0, 2);
+      const weighted = rDrift * 0.30 + rMember * 0.25 + rJoint * 0.20 +
+        rResidual * 0.10 + rAcceleration * 0.10 + rCost * 0.05;
+      const score = result.collapsed ? 1 : clamp(Math.round(100 * (1 - weighted)), 1, 100);
+      const scoreDescription = result.collapsed ? "Tower collapse under this ground motion" :
+        score >= 90 ? "Excellent control with minor or no damage" :
+        score >= 75 ? "Strong performance with limited yielding or drift" :
+        score >= 60 ? "Moderate performance with repairable damage" :
+        score >= 40 ? "Weak performance with significant yielding or joint risk" :
+        "Severe damage or collapse risk";
+
+      const resonance = Math.abs(result.motion.frequency - result.model.fundamentalFrequency) /
+        result.model.fundamentalFrequency <= 0.20;
+      const governing = [
+        ["drift", rDrift], ["member utilization", rMember], ["joint utilization", rJoint],
+        ["residual movement", rResidual], ["acceleration", rAcceleration], ["cost", rCost]
+      ].sort((a, b) => b[1] - a[1])[0];
+
+      const memberRows = [...result.memberResults].sort((a, b) => b.utilization - a.utilization).slice(0, 6).map((member) =>
+        `<tr><td>${escapeHtml(member.id)}</td><td>${escapeHtml(member.type)}</td><td>${member.stress.toFixed(1)} ksi</td><td>${(member.utilization * 100).toFixed(0)}%</td><td>${member.state}</td></tr>`
+      ).join("");
+      const jointRows = [...result.jointResults].sort((a, b) => b.utilization - a.utilization).slice(0, 6).map((joint) =>
+        `<tr><td>${escapeHtml(joint.id)}</td><td>${(joint.stress).toFixed(1)} ksi</td><td>${(joint.utilization * 100).toFixed(0)}%</td><td>${joint.state}</td></tr>`
+      ).join("");
+
+      const weakestMember = [...result.memberResults].sort((a, b) => b.utilization - a.utilization)[0];
+      const weakestJoint = [...result.jointResults].sort((a, b) => b.utilization - a.utilization)[0];
+      const reportPanel = document.getElementById("reportPanel");
+      reportPanel.innerHTML = `
+        <div class="score-ring" style="border-color:${score >= 75 ? "#16864a" : score >= 60 ? "#b7791f" : "#c53030"}">${score}</div>
+        <strong>${scoreDescription}</strong>
+        <div class="cost-row"><span>Natural frequency</span><span>${result.model.fundamentalFrequency.toFixed(2)} Hz</span></div>
+        <div class="cost-row"><span>Resonance risk</span><span>${resonance ? "Detected" : "Low"}</span></div>
+        <div class="cost-row"><span>Peak roof movement</span><span>${result.peakRoof.toFixed(2)} ft</span></div>
+        <div class="cost-row"><span>Peak acceleration</span><span>${(result.peakAcceleration / 32.174).toFixed(2)} g</span></div>
+        <div class="cost-row"><span>Peak drift ratio</span><span>${(result.peakDrift * 100).toFixed(1)}%</span></div>
+        <div class="cost-row"><span>Residual movement</span><span>${result.residualDisplacement.toFixed(2)} ft</span></div>
+        <div class="cost-row"><span>Governing weakness</span><span>${escapeHtml(governing[0])}</span></div>
+        <div class="cost-row"><span>Total cost</span><span>${formatCurrency(costs.total)}</span></div>
+        <table class="report-table">
+          <thead><tr><th>Member</th><th>Type</th><th>Stress</th><th>Use</th><th>State</th></tr></thead>
+          <tbody>${memberRows || "<tr><td colspan='5'>No members</td></tr>"}</tbody>
+        </table>
+        <table class="report-table">
+          <thead><tr><th>Joint</th><th>Stress</th><th>Use</th><th>State</th></tr></thead>
+          <tbody>${jointRows || "<tr><td colspan='4'>No joints</td></tr>"}</tbody>
+        </table>
+        <div class="section-title">Upgrade options</div>
+        <p>${weakestMember ? `Strengthen ${escapeHtml(weakestMember.id)} (${escapeHtml(weakestMember.type)}) at ${(weakestMember.utilization * 100).toFixed(0)}% utilization.` : "No member weakness detected."}</p>
+        <p>${weakestJoint ? `Improve joint ${escapeHtml(weakestJoint.id)} with stronger fasteners or reinforcement.` : "No joint weakness detected."}</p>
+        <div class="property-actions">
+          <button class="secondary" id="addBraceUpgrade" type="button">Add brace</button>
+          <button class="secondary" id="strengthenUpgrade" type="button">Strengthen top member</button>
+        </div>`;
+
+      document.getElementById("addBraceUpgrade").addEventListener("click", () => {
+        if (state.bays < 1 || state.floors < 2) return;
+        pushHistory();
+        state.members.push({
+          id: `X-${Date.now()}`,
+          type: "brace",
+          start: nodeId(0, 0),
+          end: nodeId(1, 1),
+          material: "Steel",
+          section: "HSS 4x4x1/4"
+        });
+        render();
+        const upgraded = runEarthquakeAnalysis();
+        renderReport(upgraded);
+      });
+      document.getElementById("strengthenUpgrade").addEventListener("click", () => {
+        const topMember = [...result.memberResults].sort((a, b) => b.utilization - a.utilization)[0];
+        if (!topMember) return;
+        const member = state.members.find((item) => item.id === topMember.id);
+        if (!member) return;
+        pushHistory();
+        member.width = (member.width || 10) * 1.25;
+        member.depth = (member.depth || 10) * 1.25;
+        render();
+        const upgraded = runEarthquakeAnalysis();
+        renderReport(upgraded);
+      });
+    }
+
+    function renderTestStatus(result, sample) {
+      const testingReadout = document.getElementById("testingReadout");
+      const roof = sample.displacement[sample.displacement.length - 1] || 0;
+      testingReadout.innerHTML =
+        `<span>Time ${sample.time.toFixed(2)} s</span>` +
+        `<span>PGA ${(sample.ag / 32.174).toFixed(2)} g</span>` +
+        `<span>Roof ${Math.abs(roof).toFixed(2)} ft</span>` +
+        `<span>Status ${testPaused ? "Paused" : "Running"}</span>`;
+    }
+
+    function startEarthquakeTest() {
+      if (!validateMotionInputs()) return;
+      activeRun = runEarthquakeAnalysis();
+      testElapsed = 0;
+      testPaused = false;
+      document.getElementById("testingOverlay").classList.add("active");
+      document.body.style.overflow = "hidden";
+      let lastTimestamp = performance.now();
+
+      function animate(timestamp) {
+        if (testPaused) return;
+        const speed = Number(document.getElementById("motionSpeed").value);
+        testElapsed += (timestamp - lastTimestamp) / 1000 * speed;
+        lastTimestamp = timestamp;
+        const index = Math.max(0, Math.min(activeRun.samples.length - 1,
+          Math.round(testElapsed / 0.02)));
+        const sample = activeRun.samples[index];
+        renderTestingFrame(activeRun, sample);
+        renderTestStatus(activeRun, sample);
+        if (testElapsed >= activeRun.motion.duration) {
+          finishEarthquakeTest();
+          return;
+        }
+        testAnimationFrame = requestAnimationFrame(animate);
+      }
+      testAnimationFrame = requestAnimationFrame(animate);
+    }
+
+    function finishEarthquakeTest() {
+      if (testAnimationFrame) cancelAnimationFrame(testAnimationFrame);
+      testAnimationFrame = null;
+      if (!activeRun) return;
+      renderReport(activeRun);
+      setTimeout(() => {
+        document.getElementById("testingOverlay").classList.remove("active");
+        document.body.style.overflow = "";
+        testElapsed = activeRun.motion.duration;
+      }, 400);
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (character) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[character]);
+    }
+
+    function renderGrid() {
+      let markup = `
+        <rect x="0" y="0" width="800" height="600" fill="#f8fafc"/>
+        <line class="axis-line" x1="100" y1="530" x2="700" y2="530"/>`;
+
+      for (let x = 100; x <= 700; x += 40) {
+        markup += `<line class="grid-line" x1="${x}" y1="70" x2="${x}" y2="530"/>`;
+      }
+      const yStep = Math.min(78, 390 / Math.max(1, state.floors));
+      for (let y = 530; y >= 530 - state.floors * yStep - 1; y -= yStep) {
+        markup += `<line class="grid-line" x1="100" y1="${y}" x2="700" y2="${y}"/>`;
+      }
+      markup += `<text class="floor-label" x="705" y="534">Ground</text>`;
+      for (let story = 1; story <= state.floors; story++) {
+        const y = nodePosition(0, story).y;
+        markup += `<text data-kind="floor" data-id="F-${story}" class="floor-label" x="705" y="${y + 4}">F${story}</text>`;
+      }
+      return markup;
+    }
+
+    function render() {
+      let markup = renderGrid();
+
+      state.floorsList.forEach((floor) => {
+        const y = nodePosition(0, floor.story).y;
+        const left = nodePosition(0, floor.story).x;
+        const right = nodePosition(Math.max(1, state.columnsPerRow - 1), floor.story).x;
+        const isSelected = selected && selected.kind === "floor" && selected.id === floor.id;
+        markup += `<rect data-kind="floor" data-id="${floor.id}" class="floor-slab ${isSelected ? "selected" : ""}" x="${left - 12}" y="${y - 10}" width="${right-left + 24}" height="20"/>`;
+      });
+
+      state.members.forEach((member) => {
+        const start = getNode(member.start);
+        const end = getNode(member.end);
+        const isSelected = selected && selected.kind === "member" && selected.id === member.id;
+        const className = member.type === "column" ? "column" : member.type === "beam" ? "beam" : "brace";
+        markup += `<line data-kind="member" data-id="${member.id}" class="${className} ${isSelected ? "selected" : ""}" x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}"/>`;
+      });
+
+      state.joints.forEach((joint) => {
+        const point = nodePosition(joint.bay, joint.story);
+        const isSelected = selected && selected.kind === "joint" && selected.id === joint.id;
+        markup += `<circle data-kind="joint" data-id="${joint.id}" class="joint ${isSelected ? "selected" : ""}" cx="${point.x}" cy="${point.y}" r="7"/>`;
+      });
+
+      if (placementStart && hoverNode) {
+        const start = getNode(placementStart);
+        const end = getNode(hoverNode);
+        markup += `<line x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}" stroke="#2563eb" stroke-width="5" stroke-dasharray="8 6" opacity="0.85"/>`;
+      }
+
+      for (let story = 0; story <= state.floors; story++) {
+        const columnCount = Math.max(2, state.columnsPerRow || state.bays + 1);
+        for (let bay = 0; bay < columnCount; bay++) {
+          const point = nodePosition(bay, story);
+          const isStart = placementStart === nodeId(bay, story);
+          const isHover = hoverNode === nodeId(bay, story);
+          markup += `<circle data-node="${nodeId(bay, story)}" class="node ${isStart ? "start" : ""} ${isHover ? "hover" : ""}" cx="${point.x}" cy="${point.y}" r="5"/>`;
+          if (bay === 0) {
+            markup += `<text class="node-label" x="${point.x - 24}" y="${point.y + 4}">${story === 0 ? "Base" : "S" + story}</text>`;
+          }
+        }
+      }
+
+      svg.innerHTML = markup;
+      updatePieceCounts();
+      renderProperties();
+    }
+
+    function updatePieceCounts() {
+      const columns = state.members.filter((item) => item.type === "column").length;
+      const beams = state.members.filter((item) => item.type === "beam").length;
+      const braces = state.members.filter((item) => item.type === "brace").length;
+      document.getElementById("columnCount").textContent = columns;
+      document.getElementById("beamCount").textContent = beams;
+      document.getElementById("braceCount").textContent = braces;
+      document.getElementById("floorCount").textContent = state.floorsList.length;
+      pieceCounts.textContent =
+        `${columns} columns · ${beams} beams · ${braces} braces · ${state.floorsList.length} floors · ${state.joints.length} joints`;
+      updateCostSummary();
+    }
+
+    function renderProperties() {
+      if (!selected) {
+        propertiesContent.className = "properties-empty";
+        propertiesContent.innerHTML = "Select a column, beam, brace, floor, or joint to edit its properties.";
+        return;
+      }
+
+      if (selected.kind === "member") {
+        const member = state.members.find((item) => item.id === selected.id);
+        if (!member) return;
+        member.width = member.width ?? (member.type === "column" ? 10 : member.type === "brace" ? 4 : 12);
+        member.depth = member.depth ?? (member.type === "column" ? 10 : member.type === "brace" ? 4 : 26);
+        member.yieldStrength = member.yieldStrength ?? (member.material === "Steel" ? 50 : 0);
+        propertiesContent.className = "";
+        propertiesContent.innerHTML = `
+          <div class="section-title">${member.type === "column" ? "Column" : member.type === "beam" ? "Beam" : "Brace"} properties</div>
+          <div class="field"><label>Preset</label><select id="memberSection">
+            ${member.type === "column"
+              ? ["W8x31","W10x49","W12x65"].map((value) => `<option${member.section === value ? " selected" : ""}>${value}</option>`).join("")
+              : member.type === "beam"
+              ? ["W8x24","W12x26","W16x36"].map((value) => `<option${member.section === value ? " selected" : ""}>${value}</option>`).join("")
+              : ["HSS 3x3x1/4","HSS 4x4x1/4","HSS 5x5x3/8"].map((value) => `<option${member.section === value ? " selected" : ""}>${value}</option>`).join("")}
+          </select></div>
+          <div class="field"><label>Material</label><select id="memberMaterial">
+            ${["Steel","Reinforced concrete","Timber"].map((value) => `<option${member.material === value ? " selected" : ""}>${value}</option>`).join("")}
+          </select></div>
+          <div class="field"><label>Width / diameter (in)</label><input id="memberWidth" type="number" min="1" max="120" value="${member.width}"></div>
+          <div class="field"><label>Depth / thickness (in)</label><input id="memberDepth" type="number" min="1" max="120" value="${member.depth}"></div>
+          ${member.material === "Steel"
+            ? `<div class="field"><label>Yield strength (ksi)</label><input id="memberYield" type="number" min="1" max="100" value="${member.yieldStrength}"></div>`
+            : `<div class="field"><label>Reference strength (psi)</label><input id="memberYield" type="number" min="100" max="100000" value="${member.yieldStrength || 4000}"></div>`}
+          <div class="field"><label>Length / span (ft)</label><input value="${member.type === "column" ? state.floorHeight : baySpacingInput.value}" readonly></div>
+          <div class="property-actions"><button class="secondary" id="copyProperty" type="button">Copy</button><button class="secondary" id="deleteProperty" type="button">Delete</button></div>`;
+        document.getElementById("memberSection").addEventListener("change", (event) => {
+          pushHistory();
+          member.section = event.target.value;
+          render();
+        });
+        document.getElementById("memberMaterial").addEventListener("change", (event) => {
+          pushHistory();
+          member.material = event.target.value;
+          member.yieldStrength = event.target.value === "Steel" ? 50 : event.target.value === "Reinforced concrete" ? 4000 : 1500;
+          render();
+        });
+        ["memberWidth","memberDepth","memberYield"].forEach((id) => {
+          document.getElementById(id).addEventListener("change", (event) => {
+            pushHistory();
+            if (id === "memberWidth") member.width = Math.max(1, Number(event.target.value));
+            if (id === "memberDepth") member.depth = Math.max(1, Number(event.target.value));
+            if (id === "memberYield") member.yieldStrength = Math.max(0, Number(event.target.value));
+            render();
+          });
+        });
+        document.getElementById("deleteProperty").addEventListener("click", deleteSelected);
+        document.getElementById("copyProperty").addEventListener("click", () => copySelected());
+        return;
+      }
+
+      if (selected.kind === "floor") {
+        const floor = state.floorsList.find((item) => item.id === selected.id);
+        if (!floor) return;
+        floor.mass = floor.mass ?? 0;
+        propertiesContent.className = "";
+        propertiesContent.innerHTML = `
+          <div class="section-title">Floor ${floor.story}</div>
+          <div class="field"><label>Floor area (ft²)</label><input id="floorArea" type="number" min="100" value="${floor.area}"></div>
+          <div class="field"><label>Slab thickness (in)</label><input id="floorThickness" type="number" min="2" max="24" value="${floor.thickness}"></div>
+          <div class="field"><label>Material</label><select id="floorMaterial">
+            ${["Reinforced concrete","Steel deck","Timber"].map((value) => `<option${floor.material === value ? " selected" : ""}>${value}</option>`).join("")}
+          </select></div>
+          <div class="field"><label>Added floor mass (kips)</label><input id="floorMass" type="number" min="0" max="10000" step="0.1" value="${floor.mass}"></div>
+          <div class="property-actions"><button class="secondary" id="floorDelete" type="button">Delete</button><button class="primary" id="floorDone" type="button">Done</button></div>`;
+        ["floorArea","floorThickness","floorMaterial"].forEach((id) => {
+          document.getElementById(id).addEventListener("change", (event) => {
+            pushHistory();
+            if (id === "floorArea") floor.area = Math.max(100, Number(event.target.value));
+            if (id === "floorThickness") floor.thickness = Math.max(2, Number(event.target.value));
+            if (id === "floorMaterial") floor.material = event.target.value;
+            render();
+          });
+        });
+        document.getElementById("floorMass").addEventListener("change", (event) => {
+          pushHistory();
+          floor.mass = Math.max(0, Number(event.target.value));
+          render();
+        });
+        document.getElementById("floorDelete").addEventListener("click", deleteSelected);
+        document.getElementById("floorDone").addEventListener("click", () => { selected = null; render(); });
+        return;
+      }
+
+      if (selected.kind === "joint") {
+        const joint = state.joints.find((item) => item.id === selected.id);
+        if (!joint) return;
+        joint.momentCapacity = joint.momentCapacity ?? 100;
+        joint.shearCapacity = joint.shearCapacity ?? 50;
+        joint.axialCapacity = joint.axialCapacity ?? 100;
+        joint.rotationLimit = joint.rotationLimit ?? 0.05;
+        propertiesContent.className = "";
+        propertiesContent.innerHTML = `
+          <div class="section-title">Joint ${joint.id}</div>
+          <div class="field"><label>Connection type</label><select id="jointType">
+            ${["Fixed preset","Pinned","Bolted","Welded","Reinforced concrete"].map((value) => `<option${joint.type === value ? " selected" : ""}>${value}</option>`).join("")}
+          </select></div>
+          <div class="field"><label>Node</label><input value="X: ${joint.bay}, Floor: ${joint.story}" readonly></div>
+          <div class="field"><label>Moment capacity (kip-ft)</label><input id="jointMoment" type="number" min="0" max="100000" value="${joint.momentCapacity}"></div>
+          <div class="field"><label>Shear capacity (kips)</label><input id="jointShear" type="number" min="0" max="100000" value="${joint.shearCapacity}"></div>
+          <div class="field"><label>Axial capacity (kips)</label><input id="jointAxial" type="number" min="0" max="100000" value="${joint.axialCapacity}"></div>
+          <div class="field"><label>Rotation limit (rad)</label><input id="jointRotation" type="number" min="0" max="1" step="0.001" value="${joint.rotationLimit}"></div>
+          <div class="property-actions"><button class="secondary" id="jointDelete" type="button">Delete</button><button class="primary" id="jointDone" type="button">Done</button></div>`;
+        document.getElementById("jointType").addEventListener("change", (event) => {
+          pushHistory();
+          joint.type = event.target.value;
+          render();
+        });
+        [
+          ["jointMoment", "momentCapacity", 0],
+          ["jointShear", "shearCapacity", 0],
+          ["jointAxial", "axialCapacity", 0],
+          ["jointRotation", "rotationLimit", 0]
+        ].forEach(([id, key, minimum]) => {
+          document.getElementById(id).addEventListener("change", (event) => {
+            pushHistory();
+            joint[key] = Math.max(minimum, Number(event.target.value));
+            render();
+          });
+        });
+        document.getElementById("jointDelete").addEventListener("click", deleteSelected);
+        document.getElementById("jointDone").addEventListener("click", () => { selected = null; render(); });
+      }
+    }
+
+    function setTool(nextTool) {
+      tool = nextTool;
+      placementStart = null;
+      document.querySelectorAll(".piece").forEach((button) => {
+        button.classList.toggle("active", button.dataset.tool === tool);
+      });
+      const names = { select: "Select", column: "Column", beam: "Beam", brace: "Brace", floor: "Floor", joint: "Joint" };
+      modeName.textContent = names[tool];
+      placementHint.textContent = tool === "select"
+        ? "Select a piece, then click a member or grid point."
+        : tool === "floor"
+        ? "Click a floor slab or use the geometry controls."
+        : "Click one grid point, then a second grid point.";
+      render();
+    }
+
+    function deleteSelected() {
+      if (!selected) return;
+      pushHistory();
+      if (selected.kind === "member") {
+        state.members = state.members.filter((item) => item.id !== selected.id);
+      } else if (selected.kind === "floor") {
+        state.floorsList = state.floorsList.filter((item) => item.id !== selected.id);
+      } else if (selected.kind === "joint") {
+        state.joints = state.joints.filter((item) => item.id !== selected.id);
+      }
+      selected = null;
+      render();
+    }
+
+    function copySelected() {
+      if (!selected || selected.kind !== "member") return;
+      const member = state.members.find((item) => item.id === selected.id);
+      if (!member) return;
+      pushHistory();
+      const copied = JSON.parse(JSON.stringify(member));
+      copied.id = `${member.type}-${Date.now()}`;
+      state.members.push(copied);
+      selected = { kind: "member", id: copied.id };
+      render();
+    }
+
+    function validateGeometry() {
+      const values = {
+        floors: Number(floorsInput.value),
+        bays: Number(baysInput.value),
+        columnsPerRow: Number(columnsPerRowInput.value),
+        floorHeight: Number(floorHeightInput.value),
+        baySpacing: Number(baySpacingInput.value)
+      };
+      const valid = Number.isInteger(values.floors) && values.floors >= 1 && values.floors <= 10 &&
+        Number.isInteger(values.bays) && values.bays >= 1 && values.bays <= 6 &&
+        Number.isInteger(values.columnsPerRow) && values.columnsPerRow >= 2 && values.columnsPerRow <= 8 &&
+        values.floorHeight >= 8 && values.floorHeight <= 30 &&
+        values.baySpacing >= 10 && values.baySpacing <= 30;
+      geometryValidation.classList.toggle("visible", !valid);
+      geometryValidation.textContent = valid ? "" : "Use 1–10 floors, 1–6 bays, 2–8 columns per row, 8–30 ft floor height, and 10–30 ft bay spacing.";
+      return valid;
+    }
+
+    function rebuildGeometry() {
+      if (!validateGeometry()) return;
+      pushHistory();
+      state.floors = Number(floorsInput.value);
+      state.bays = Number(baysInput.value);
+      state.columnsPerRow = Number(columnsPerRowInput.value);
+      state.floorHeight = Number(floorHeightInput.value);
+      state.baySpacing = Number(baySpacingInput.value);
+      makeDefaultPreset();
+      selected = null;
+      render();
+    }
+
+    svg.addEventListener("pointermove", (event) => {
+      if (tool === "select" || tool === "floor") {
+        hoverNode = null;
+        return;
+      }
+      const nextHover = nearestNodeFromEvent(event);
+      if (nextHover !== hoverNode) {
+        hoverNode = nextHover;
+        render();
+      }
+    });
+
+    svg.addEventListener("click", (event) => {
+      const nodeElement = event.target.closest("[data-node]");
+      const memberElement = event.target.closest("[data-kind='member']");
+      const floorElement = event.target.closest("[data-kind='floor']");
+      const jointElement = event.target.closest("[data-kind='joint']");
+
+      if (tool === "select") {
+        if (memberElement) selected = { kind: "member", id: memberElement.dataset.id };
+        else if (floorElement) selected = { kind: "floor", id: floorElement.dataset.id };
+        else if (jointElement) selected = { kind: "joint", id: jointElement.dataset.id };
+        else selected = null;
+        render();
+        return;
+      }
+
+      if (tool === "floor") {
+        if (floorElement) {
+          selected = { kind: "floor", id: floorElement.dataset.id };
+          render();
+        }
+        return;
+      }
+
+      const nodeTarget = nodeElement ? nodeElement.dataset.node : nearestNodeFromEvent(event);
+      if (!nodeTarget || (tool !== "column" && tool !== "beam" && tool !== "brace" && tool !== "joint")) return;
+
+      if (tool === "joint") {
+        const node = nodeTarget;
+        const [bay, story] = node.split("-").map(Number);
+        const existing = state.joints.find((item) => item.bay === bay && item.story === story);
+        if (!existing) {
+          pushHistory();
+          state.joints.push({ id: `J-${bay}-${story}`, bay, story, type: "Fixed preset" });
+          render();
+        }
+        return;
+      }
+
+      const node = nodeTarget;
+      if (!placementStart) {
+        placementStart = node;
+      } else {
+        if (placementStart !== node) {
+          pushHistory();
+          const idPrefix = tool === "column" ? "C" : tool === "beam" ? "B" : "X";
+          state.members.push({
+            id: `${idPrefix}-${Date.now()}`,
+            type: tool,
+            start: placementStart,
+            end: node,
+            material: "Steel",
+            section: tool === "column" ? "W10x49" : tool === "beam" ? "W12x26" : "HSS 4x4x1/4"
+          });
+        }
+        placementStart = null;
+        render();
+      }
+    });
+
+    document.querySelectorAll(".piece").forEach((button) => {
+      button.addEventListener("click", () => setTool(button.dataset.tool));
+    });
+
+    [floorsInput, baysInput, columnsPerRowInput, floorHeightInput, baySpacingInput].forEach((input) => {
+      input.addEventListener("change", rebuildGeometry);
+    });
+
+    document.getElementById("undoButton").addEventListener("click", () => {
+      if (!undoStack.length) return;
+      redoStack.push(snapshot());
+      restore(undoStack.pop());
+    });
+    document.getElementById("redoButton").addEventListener("click", () => {
+      if (!redoStack.length) return;
+      undoStack.push(snapshot());
+      restore(redoStack.pop());
+    });
+    document.getElementById("deleteButton").addEventListener("click", deleteSelected);
+    document.getElementById("clearButton").addEventListener("click", () => {
+      pushHistory();
+      state.members = [];
+      state.floorsList = [];
+      state.joints = [];
+      selected = null;
+      render();
+    });
+    document.getElementById("saveTowerButton").addEventListener("click", saveTower);
+    document.getElementById("saveRightButton").addEventListener("click", saveTower);
+    document.getElementById("compareButton").addEventListener("click", compareSelectedTowers);
+    document.getElementById("runButton").addEventListener("click", startEarthquakeTest);
+    document.getElementById("leftRunButton").addEventListener("click", startEarthquakeTest);
+    document.getElementById("pauseTestButton").addEventListener("click", () => {
+      if (!activeRun) return;
+      testPaused = !testPaused;
+      document.getElementById("pauseTestButton").textContent = testPaused ? "Resume" : "Pause";
+      if (!testPaused) {
+        let lastTimestamp = performance.now();
+        const speed = Number(document.getElementById("motionSpeed").value);
+        function resume(timestamp) {
+          if (testPaused) return;
+          testElapsed += (timestamp - lastTimestamp) / 1000 * speed;
+          lastTimestamp = timestamp;
+          const index = Math.max(0, Math.min(activeRun.samples.length - 1,
+            Math.round(testElapsed / 0.02)));
+          const sample = activeRun.samples[index];
+          renderTestingFrame(activeRun, sample);
+          renderTestStatus(activeRun, sample);
+          if (testElapsed >= activeRun.motion.duration) {
+            finishEarthquakeTest();
+            return;
+          }
+          testAnimationFrame = requestAnimationFrame(resume);
+        }
+        testAnimationFrame = requestAnimationFrame(resume);
+      } else if (testAnimationFrame) {
+        cancelAnimationFrame(testAnimationFrame);
+        testAnimationFrame = null;
+      }
+    });
+    document.getElementById("replayTestButton").addEventListener("click", () => {
+      testElapsed = 0;
+      testPaused = false;
+      document.getElementById("pauseTestButton").textContent = "Pause";
+      if (testAnimationFrame) cancelAnimationFrame(testAnimationFrame);
+      startEarthquakeTest();
+    });
+    document.getElementById("exitTestButton").addEventListener("click", () => {
+      if (testAnimationFrame) cancelAnimationFrame(testAnimationFrame);
+      testAnimationFrame = null;
+      testPaused = false;
+      document.getElementById("testingOverlay").classList.remove("active");
+      document.body.style.overflow = "";
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Delete" || event.key === "Backspace") {
+        if (event.target.tagName !== "INPUT" && event.target.tagName !== "SELECT") deleteSelected();
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        document.getElementById("undoButton").click();
+      }
+    });
+
+    makeDefaultPreset();
+    render();
+    updateCostSummary();
+    renderSavedModels();
+  </script>
+</body>
+</html>
