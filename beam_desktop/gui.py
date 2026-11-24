@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import tkinter as tk
 from math import isfinite
-from tkinter import ttk
+from pathlib import Path
+from tkinter import filedialog, messagebox, ttk
 from typing import Literal
 
 from beam_analysis import (
@@ -18,6 +19,8 @@ from beam_analysis import (
     recommend_section,
     validate_state,
 )
+from beam_files import read_beam_file, write_beam_file, write_results_csv
+from beam_report import create_calculation_sheet
 
 
 BACKGROUND = "#f1f5f9"
@@ -118,6 +121,7 @@ class BeamDesigner:
         self.section_var = tk.StringVar(root, "W12x26")
         self.deflection_limit_var = tk.IntVar(root, 360)
         self.status_var = tk.StringVar(root, "Example loaded")
+        self.current_project_path: Path | None = None
 
         self.load_rows: list[LoadRow] = []
         self._trace_tokens: list[tuple[tk.Variable, str]] = []
@@ -138,6 +142,7 @@ class BeamDesigner:
         self.root.columnconfigure(0, weight=0)
         self.root.columnconfigure(1, weight=1)
         self.root.rowconfigure(1, weight=1)
+        self._build_file_menu()
 
         header = ttk.Frame(self.root, style="App.TFrame", padding=(18, 12))
         header.grid(row=0, column=0, columnspan=2, sticky="ew")
@@ -153,7 +158,19 @@ class BeamDesigner:
         self.status_label = ttk.Label(
             header, textvariable=self.status_var, style="Status.TLabel"
         )
-        self.status_label.grid(row=0, column=1, rowspan=2, sticky="e", padx=(12, 4))
+        self.status_label.grid(row=0, column=1, sticky="e", padx=(12, 4))
+        file_buttons = ttk.Frame(header)
+        file_buttons.grid(row=1, column=1, sticky="e", padx=(10, 0), pady=(4, 0))
+        ttk.Button(file_buttons, text="Open", command=self._open_beam).grid(row=0, column=0)
+        ttk.Button(file_buttons, text="Save", command=self._save_beam).grid(
+            row=0, column=1, padx=(4, 0)
+        )
+        ttk.Button(file_buttons, text="Export CSV", command=self._export_results_csv).grid(
+            row=0, column=2, padx=(4, 0)
+        )
+        ttk.Button(file_buttons, text="Calculation PDF", command=self._export_calculation_sheet).grid(
+            row=0, column=3, padx=(4, 0)
+        )
 
         self.sidebar = ttk.Frame(self.root, width=395, style="App.TFrame")
         self.sidebar.grid(row=1, column=0, sticky="nsew")
@@ -220,6 +237,20 @@ class BeamDesigner:
         self.plot_canvas.bind("<ButtonPress-1>", self._on_plot_press)
         self.plot_canvas.bind("<B1-Motion>", self._on_plot_drag)
         self.plot_canvas.bind("<ButtonRelease-1>", self._on_plot_release)
+
+    def _build_file_menu(self) -> None:
+        menu_bar = tk.Menu(self.root)
+        file_menu = tk.Menu(menu_bar, tearoff=False)
+        file_menu.add_command(label="Open...", command=self._open_beam)
+        file_menu.add_command(label="Save", command=self._save_beam)
+        file_menu.add_command(label="Save As...", command=lambda: self._save_beam(save_as=True))
+        file_menu.add_separator()
+        file_menu.add_command(label="Export Results as CSV...", command=self._export_results_csv)
+        file_menu.add_command(label="Export Calculation Sheet as PDF...", command=self._export_calculation_sheet)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.root.destroy)
+        menu_bar.add_cascade(label="File", menu=file_menu)
+        self.root.configure(menu=menu_bar)
 
     def _resize_sidebar_scroll(self, event: tk.Event) -> None:
         self.sidebar_canvas.configure(scrollregion=(0, 0, event.width, event.height))
@@ -413,7 +444,9 @@ class BeamDesigner:
             token = variable.trace_add("write", self._on_input_changed)
             row.trace_tokens.append((variable, token))
 
-    def _add_load(self, kind: str, values: dict[str, str]) -> None:
+    def _add_load(
+        self, kind: str, values: dict[str, str], *, refresh: bool = True
+    ) -> None:
         index = len(self.load_rows) + 1
         title = "Point load" if kind == "point" else "Uniform load"
         frame = ttk.LabelFrame(self.load_list_frame, text=f"{title} {index}", padding=7)
@@ -468,7 +501,7 @@ class BeamDesigner:
             self._watch_load_row(row)
         if self._trace_tokens:
             self._has_changed = True
-        if hasattr(self, "current_analysis"):
+        if refresh and hasattr(self, "current_analysis"):
             self._refresh()
 
     def _remove_load(self, frame: ttk.LabelFrame) -> None:
@@ -498,6 +531,181 @@ class BeamDesigner:
             "uniform",
             {"magnitude": "1", "start": "0", "end": f"{self._current_span():.2f}"},
         )
+
+    def _save_beam(self, *, save_as: bool = False) -> None:
+        state, errors = self._read_state()
+        if state is None:
+            messagebox.showerror(
+                "Cannot save beam",
+                "Correct the following inputs before saving:\n\n" + "\n".join(errors),
+                parent=self.root,
+            )
+            return
+
+        path = self.current_project_path
+        if path is None or save_as:
+            selected = filedialog.asksaveasfilename(
+                parent=self.root,
+                title="Save Beam",
+                defaultextension=".beam.json",
+                initialfile=path.name if path is not None else "beam.beam.json",
+                filetypes=(
+                    ("Beam Designer projects", "*.beam.json"),
+                    ("JSON files", "*.json"),
+                ),
+            )
+            if not selected:
+                return
+            path = Path(selected)
+
+        try:
+            write_beam_file(path, state)
+        except (OSError, ValueError) as error:
+            messagebox.showerror(
+                "Could not save beam",
+                f"The beam file could not be saved:\n{error}",
+                parent=self.root,
+            )
+            return
+
+        self.current_project_path = path
+        self._update_window_title()
+        self.status_var.set(f"Saved {path.name}")
+
+    def _open_beam(self) -> None:
+        selected = filedialog.askopenfilename(
+            parent=self.root,
+            title="Open Beam",
+            filetypes=(
+                ("Beam Designer projects", "*.beam.json"),
+                ("JSON files", "*.json"),
+            ),
+        )
+        if not selected:
+            return
+        path = Path(selected)
+        try:
+            state = read_beam_file(path)
+        except (OSError, ValueError) as error:
+            messagebox.showerror(
+                "Could not open beam",
+                f"The selected file was not loaded:\n{error}",
+                parent=self.root,
+            )
+            return
+
+        self._load_project_state(state)
+        self.current_project_path = path
+        self._update_window_title()
+        self.status_var.set(f"Opened {path.name}")
+
+    def _load_project_state(self, state: BeamState) -> None:
+        self._syncing = True
+        self.support_var.set(state.support)
+        self.span_var.set(repr(state.span))
+        self.span_scale_var.set(state.span)
+        self.material_var.set(state.material)
+        self.material_display_var.set(
+            "Steel" if state.material == "steel" else "Douglas Fir-Larch No. 2 lumber"
+        )
+        self.section_var.set(state.section)
+        self.deflection_limit_var.set(state.deflection_limit)
+        self._refresh_section_choices()
+
+        for row in self.load_rows:
+            for variable, token in row.trace_tokens:
+                variable.trace_remove("write", token)
+            row.frame.destroy()
+        self.load_rows.clear()
+        for load in state.loads:
+            if load.kind == "point":
+                self._add_load(
+                    "point",
+                    {
+                        "magnitude": repr(load.magnitude),
+                        "position": repr(load.position),
+                    },
+                    refresh=False,
+                )
+            else:
+                self._add_load(
+                    "uniform",
+                    {
+                        "magnitude": repr(load.magnitude),
+                        "start": repr(load.start),
+                        "end": repr(load.end),
+                    },
+                    refresh=False,
+                )
+        self._syncing = False
+        self._sync_load_bounds(state.span)
+        self._has_changed = False
+        self.pointer_x = state.span / 2
+        self.pointer_visible = False
+        self.pointer_readout.grid_remove()
+        self._refresh()
+
+    def _update_window_title(self) -> None:
+        name = self.current_project_path.name if self.current_project_path else None
+        self.root.title(f"Beam Designer - {name}" if name else "Beam Designer")
+
+    def _export_results_csv(self) -> None:
+        state, errors = self._read_state()
+        if state is None:
+            messagebox.showerror(
+                "Cannot export results",
+                "Correct the following inputs before exporting:\n\n" + "\n".join(errors),
+                parent=self.root,
+            )
+            return
+        selected = filedialog.asksaveasfilename(
+            parent=self.root,
+            title="Export Results as CSV",
+            defaultextension=".csv",
+            initialfile="beam-results.csv",
+            filetypes=(("CSV files", "*.csv"),),
+        )
+        if not selected:
+            return
+        try:
+            write_results_csv(selected, analyze(state))
+        except OSError as error:
+            messagebox.showerror(
+                "Could not export results",
+                f"The CSV file could not be written:\n{error}",
+                parent=self.root,
+            )
+            return
+        self.status_var.set(f"Exported {Path(selected).name}")
+
+    def _export_calculation_sheet(self) -> None:
+        state, errors = self._read_state()
+        if state is None:
+            messagebox.showerror(
+                "Cannot export calculation sheet",
+                "Correct the following inputs before exporting:\n\n" + "\n".join(errors),
+                parent=self.root,
+            )
+            return
+        selected = filedialog.asksaveasfilename(
+            parent=self.root,
+            title="Export Calculation Sheet as PDF",
+            defaultextension=".pdf",
+            initialfile="beam-calculation-sheet.pdf",
+            filetypes=(("PDF files", "*.pdf"),),
+        )
+        if not selected:
+            return
+        try:
+            create_calculation_sheet(selected, analyze(state))
+        except (OSError, ValueError) as error:
+            messagebox.showerror(
+                "Could not export calculation sheet",
+                f"The PDF file could not be created:\n{error}",
+                parent=self.root,
+            )
+            return
+        self.status_var.set(f"Exported {Path(selected).name}")
 
     def _current_span(self) -> float:
         try:

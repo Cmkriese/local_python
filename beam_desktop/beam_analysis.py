@@ -47,6 +47,9 @@ MATERIALS: dict[str, Material] = {
     ),
 }
 
+PROJECT_FORMAT = "beam-designer"
+PROJECT_VERSION = 1
+
 
 @dataclass(frozen=True)
 class BeamLoad:
@@ -151,6 +154,141 @@ def validate_state(state: BeamState) -> list[str]:
         else:
             errors.append(f"Load {index} has an unsupported load type.")
     return errors
+
+
+def beam_state_to_project(state: BeamState) -> dict[str, object]:
+    errors = validate_state(state)
+    if errors:
+        raise ValueError("Cannot save invalid beam: " + " ".join(errors))
+
+    loads: list[dict[str, object]] = []
+    for load in state.loads:
+        if load.kind == "point":
+            loads.append({
+                "type": "point",
+                "magnitude_kips": load.magnitude,
+                "position_ft": load.position,
+            })
+        else:
+            loads.append({
+                "type": "uniform",
+                "magnitude_kips_per_ft": load.magnitude,
+                "start_ft": load.start,
+                "end_ft": load.end,
+            })
+    return {
+        "format": PROJECT_FORMAT,
+        "version": PROJECT_VERSION,
+        "beam": {
+            "support": state.support,
+            "span_ft": state.span,
+            "material": state.material,
+            "section": state.section,
+            "deflection_limit": state.deflection_limit,
+            "loads": loads,
+        },
+    }
+
+
+def beam_state_from_project(data: object) -> BeamState:
+    project = _project_mapping(data, "Project")
+    if project.get("format") != PROJECT_FORMAT:
+        raise ValueError("This is not a Beam Designer project file.")
+    version = project.get("version")
+    if type(version) is not int or version != PROJECT_VERSION:
+        raise ValueError("Unsupported Beam Designer project version.")
+
+    beam = _project_mapping(project.get("beam"), "Beam")
+    support = _project_string(beam.get("support"), "Support")
+    material = _project_string(beam.get("material"), "Material")
+    section = _project_string(beam.get("section"), "Section")
+    span = _project_number(beam.get("span_ft"), "Span")
+    deflection_limit = beam.get("deflection_limit")
+    if type(deflection_limit) is not int:
+        raise ValueError("Deflection limit must be an integer.")
+    serialized_loads = beam.get("loads")
+    if not isinstance(serialized_loads, list):
+        raise ValueError("Loads must be a list.")
+
+    loads: list[BeamLoad] = []
+    for index, serialized_load in enumerate(serialized_loads, start=1):
+        load = _project_mapping(serialized_load, f"Load {index}")
+        kind = _project_string(load.get("type"), f"Load {index} type")
+        if kind == "point":
+            loads.append(
+                BeamLoad(
+                    kind="point",
+                    magnitude=_project_number(
+                        load.get("magnitude_kips"), f"Point load {index} magnitude"
+                    ),
+                    position=_project_number(
+                        load.get("position_ft"), f"Point load {index} position"
+                    ),
+                )
+            )
+        elif kind == "uniform":
+            loads.append(
+                BeamLoad(
+                    kind="uniform",
+                    magnitude=_project_number(
+                        load.get("magnitude_kips_per_ft"),
+                        f"Uniform load {index} magnitude",
+                    ),
+                    start=_project_number(
+                        load.get("start_ft"), f"Uniform load {index} start"
+                    ),
+                    end=_project_number(
+                        load.get("end_ft"), f"Uniform load {index} end"
+                    ),
+                )
+            )
+        else:
+            raise ValueError(f"Load {index} has an unsupported type.")
+
+    if support == "simply-supported":
+        support_type: Literal["simply-supported", "cantilever"] = "simply-supported"
+    elif support == "cantilever":
+        support_type = "cantilever"
+    else:
+        raise ValueError("Unsupported support type.")
+    state = BeamState(
+        support=support_type,
+        span=span,
+        loads=tuple(loads),
+        material=material,
+        section=section,
+        deflection_limit=deflection_limit,
+    )
+    errors = validate_state(state)
+    if errors:
+        raise ValueError("Invalid beam project: " + " ".join(errors))
+    return state
+
+
+def _project_mapping(value: object, label: str) -> dict[str, object]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be an object.")
+    result: dict[str, object] = {}
+    for key, item in value.items():
+        if not isinstance(key, str):
+            raise ValueError(f"{label} contains a non-text key.")
+        result[key] = item
+    return result
+
+
+def _project_string(value: object, label: str) -> str:
+    if not isinstance(value, str):
+        raise ValueError(f"{label} must be text.")
+    return value
+
+
+def _project_number(value: object, label: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{label} must be a number.")
+    number = float(value)
+    if not isfinite(number):
+        raise ValueError(f"{label} must be finite.")
+    return number
 
 
 def _uniform_extent(load: BeamLoad, span: float) -> tuple[float, float]:

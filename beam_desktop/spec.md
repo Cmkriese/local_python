@@ -242,6 +242,21 @@ The available sections are:
 - **File errors:** Do not save while inputs are invalid; show a clear
   validation message. If an opened file is malformed, unsupported, or contains
   invalid beam inputs, show a clear error and leave the current beam unchanged.
+- **CSV results export:** Provide an Export Results CSV command with a native
+  file dialog. Export the analysis samples in beam-position order with the
+  columns `x (ft)`, `V (kips)`, `M (kip-ft)`, and `Deflection (in)`. Include
+  the analysis samples at regular intervals and exact supports, load
+  locations/boundaries, and calculated extrema. Use duplicate `x` rows at
+  point loads when needed to preserve the shear values on both sides of the
+  load. Write a UTF-8 CSV that opens cleanly in Excel.
+- **PDF calculation sheet:** Provide an Export Calculation Sheet PDF command
+  with a native file dialog. Create a print-ready report with the beam inputs
+  and ordered load list at the top, followed by support reactions, bending and
+  deflection checks, the section recommendation, the beam drawing, and the
+  shear, moment, and deflection diagrams. The report must use the current
+  valid input state and calculated results.
+- **Export errors:** Do not export results when inputs are invalid; show a
+  clear validation message. Report file-writing errors clearly.
 
 ## Look and feel
 - Opens with an example already loaded (20 ft simply supported W12x26
@@ -338,6 +353,11 @@ in the Calculations section.
   diagrams, and deflection values must match the pre-save beam.
 - An invalid or unsupported project file must report an error without
   replacing the current beam.
+- The CSV export must contain the specified headers and all analysis sample
+  locations. At a point-load location, duplicate rows must contain the
+  pre-load and post-load shear values.
+- The PDF calculation sheet must contain the inputs and ordered loads before
+  the reactions, checks, recommendation, and all four diagrams.
 
 ## Build stages
 
@@ -410,6 +430,22 @@ in the Calculations section.
   Also verify malformed, unsupported, or invalid files leave the current beam
   unchanged and show a clear error.
 
+### Stage 8: Export results to CSV
+- Add an Export Results CSV command with a native file dialog.
+- Write the analysis sample locations and `x`, `V`, `M`, and deflection values
+  as a UTF-8 CSV suitable for Excel, preserving both shear values at point
+  load jumps.
+- Test the header, sample coverage, units, and duplicate point-load rows.
+
+### Stage 9: Export calculation sheet PDF
+- Add an Export Calculation Sheet PDF command and a declared PDF-generation
+  dependency.
+- Generate a print-ready sheet with inputs and the ordered load list at the
+  top, then reactions, design checks, recommendations, and the beam and
+  analysis diagrams.
+- Test that a valid beam produces a readable PDF with all required sections
+  and diagrams, and that invalid inputs and file errors are reported.
+
 ## Out of scope
 - Beam geometry other than a prismatic, straight beam with the two
   support types provided.
@@ -430,7 +466,7 @@ in the Calculations section.
 - Composite beams, built-up sections, reinforced concrete, prestressed
   concrete, and other material systems.
 - Three-dimensional models and three-dimensional frame or truss analysis.
-- Sharing designs across users or cloud services, exporting, and printing.
+- Sharing designs across users or cloud services and a separate print command.
 
 ## Beam deformation and stress visualization
 - When the beam has any nonzero load, the beam drawing must show the

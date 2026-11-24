@@ -16,3 +16,12 @@
 - Asked: Please push all the commits.
   Changed: Pushed the local commits on `master` to `origin/master`.
   Worked: Yes; the branch was up to date after the push.
+- Asked: Build the requested Save/Open feature so a beam can be reopened with its loads and calculated deflection restored.
+  Changed: Added versioned JSON project files, input validation, and UI actions that restore saved settings and loads before recalculating results.
+  Worked: Yes; project round-trip tests and a Tkinter Save/Open smoke test passed, including preservation of the current beam when a malformed file is opened.
+- Asked: Add a CSV export button for x, V, M, and deflection along the beam.
+  Changed: Added Excel-friendly UTF-8 CSV export with units, sampled results, and both shear values at point-load jumps.
+  Worked: Yes; CSV content tests and the Tkinter export smoke test passed.
+- Asked: Add a PDF calculation sheet with diagrams and checks, with inputs listed at the top.
+  Changed: Added a ReportLab PDF export with input/load tables, reactions, design checks, recommendation, beam sketch, and shear, moment, and deflection diagrams; documented the feature in `spec.md`.
+  Worked: Yes; PDF-generation tests and the Tkinter export smoke test passed.
