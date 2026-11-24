@@ -1,7 +1,7 @@
 # Earthquake Shaker
 
 ## Purpose
-Build a model tower with columns, beams, braces, and floor masses, then shake it using simulated earthquake ground motion. The app will measure movement based on ground-motion frequency and amplitude, show results and piece costs with a total cost and strength score, and save and compare multiple tower designs against the same or different ground motions.
+Create a native Python desktop application using Tkinter. Users build a model tower with columns, beams, braces, and floor masses, then shake it using simulated earthquake ground motion. The app measures movement based on ground-motion frequency and amplitude, shows results and piece costs with a total cost and strength score, and saves and compares multiple tower designs against the same or different ground motions. The desktop app is a reimplementation of the Earthquake Shaker described by the source project specification; it does not depend on a browser or web application runtime.
 
 ## Inputs
 ### Building geometry
@@ -529,11 +529,10 @@ Build a model tower with columns, beams, braces, and floor masses, then shake it
 - The app shall keep cost hidden from the editing screen except for the piece library preview and shall not require the user to enter cost values.
 - Cost, recommendations, score, detailed table, and saved comparison results shall appear after or beside simulation in a report panel.
 - The base interface shall use light, neutral colors with a restrained structural accent color and clear red, orange, yellow, green, and gray state colors.
-- Buttons, tabs, dropdowns, inputs, and model handles shall have large touch targets and visible keyboard focus.
+- Buttons, tabs, dropdowns, inputs, and model handles shall be usable with a mouse and keyboard, with visible keyboard focus.
 - Loading, simulation, and reset actions shall provide immediate but unobtrusive status feedback.
-- The layout shall place tools and model on desktop in a left-center-right arrangement and stack into tools, model, and results on phone widths.
-- On phones, piece placement shall remain usable through tap-to-select and tap-to-place rather than requiring precise dragging.
-- On phones, number entry and dropdown panels shall remain easy to read and avoid horizontal page scrolling.
+- The desktop window shall arrange editing tools, the model view, and results so the tower remains visible while editing.
+- The main window shall support resizing; panels and controls shall adapt to available desktop space without hiding essential model or simulation controls.
 - Dialog boxes shall confirm deletion, collapse reset, tower reset, and saved-model overwrite actions.
 - The app shall preserve valid model edits while changing views and shall not require a rebuild button or page refresh.
 - When Play is pressed, the editor panel shall transition into a full-screen or nearly full-screen testing-zone screen.
@@ -644,7 +643,7 @@ Build a model tower with columns, beams, braces, and floor masses, then shake it
 - Confirm that stale results and stale damage states are hidden after an input becomes invalid.
 - Confirm that Pause freezes motion, Replay restores the initial state, Reset returns the ground and tower to rest, and Exit returns to editing.
 - Confirm that Play can be used with the keyboard and that Pause, Replay, Reset, and Exit have visible focus states.
-- Confirm the testing zone remains uncluttered and the tower motion is visible on a desktop and a phone-sized screen.
+- Confirm the testing zone remains uncluttered and tower motion remains visible at common desktop window sizes.
 
 ## Out of scope
 - This app does not predict or forecast real earthquake ground motion.
@@ -654,7 +653,7 @@ Build a model tower with columns, beams, braces, and floor masses, then shake it
 - It is not a substitute for geotechnical surveys, professional seismic analysis, or an engineer's signed design.
 
 ## Implementation Steps
-1. **Build the tower editor.** Create the 2D grid, floor and story controls, member library, and click-or-drag placement for columns, beams, braces, joints, and floor masses.
+1. **Build the Tkinter tower editor.** Create the desktop window, 2D grid, floor and story controls, member library, and click-or-drag placement for columns, beams, braces, joints, and floor masses.
 2. **Add editable pieces and properties.** Provide preset materials and member sizes, custom dimensions, floor thickness and area, material dropdowns, joint strength controls, and live piece counts.
 3. **Implement cost and saved models.** Assign preset piece prices, calculate itemized and total cost, and add save, duplicate, rename, delete, and compare actions for tower versions.
 4. **Build the 2D structural calculation engine.** Assemble floor masses, member stiffness, joint springs, plastic hinges, damping, natural frequencies, ground acceleration, Newmark time integration, member forces, joint forces, stress, strain, and damage.
